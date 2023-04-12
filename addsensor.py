@@ -49,17 +49,18 @@ class AddSensor(QDialog):
         except:
             sens_value = []
             return sens_value
-
-    # Открытие карты
+        
+    # Открытие карты и запись координат в ячейки
     def mapshow(self):
         new_map = map.Map(coords = self.coords)
         new_map.exec_()
         try:
-            coords = new_map.page.returncoords()
+            coords = list(new_map.page.coords)
             self.ui.E_W_textEdit.setText(str(coords[0]))
             self.ui.N_S_textEdit.setText(str(coords[1]))
         except:
-            pass
+            self.ui.E_W_textEdit.setText('')
+            self.ui.N_S_textEdit.setText('')
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

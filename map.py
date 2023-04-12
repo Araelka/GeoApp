@@ -77,8 +77,15 @@ class Map(QDialog):
                 var coords = JSON.stringify(layer.toGeoJSON());
                 {%- if this.show_geometry_on_click %}
                 layer.on('click', function() {
+                    var answer = confirm('Выбрать этот датчик?');
+                    if (answer==true){
                     console.log(coords);
                     return coords;
+                    }
+                    else{
+                    console.log(0);
+                    return 0;
+                    }
                 });
                 {%- endif %}
                 drawnItems.addLayer(layer);
@@ -114,7 +121,7 @@ class Map(QDialog):
 
         # folium.ClickForMarker('<b>Новый датчик</b><br /> <b>N/S:</b> ${lat}<br /><b>E/W:</b> ${lng}').add_to(m)
 
-
+    
         MousePosition(
             position="topright",
             separator=" | ",
@@ -127,9 +134,11 @@ class Map(QDialog):
         ).add_to(m)
 
         # Добавление датчиков
-        for i in self.coords:
-            folium.Marker(location=[i[1], i[2]], popup='<b>'+str(i[0])+'</b><br /> <b>N/S:</b>'+ str(i[1])+'<br /><b>E/W:</b>' + str(i[2])).add_to(m)
-
+        try:
+            for i in self.coords:
+                folium.Marker(location=[i[1], i[2]], popup='<b>'+str(i[0])+'</b><br /> <b>N/S:</b>'+ str(i[1])+'<br /><b>E/W:</b>' + str(i[2])).add_to(m)
+        except:
+            pass
         data = io.BytesIO()
         m.save(data, close_file=False)
         return data
@@ -137,17 +146,22 @@ class Map(QDialog):
         # view.show()
         # layout.addWidget(view)
 
+    
     class WebEnginePage(QtWebEngineWidgets.QWebEnginePage):
         def javaScriptConsoleMessage(self, level, msg, line, sourceID):
             self.coords = []
             coords_dict = json.loads(msg)
-            self.coords.append(coords_dict['geometry']['coordinates'][0])
-            self.coords.append(coords_dict['geometry']['coordinates'][1])
-            self.returncoords()
+            try:
+                self.coords.append(coords_dict['geometry']['coordinates'][0])
+                self.coords.append(coords_dict['geometry']['coordinates'][1])
+                self.close()
+            except:
+                pass
+            # self.returncoords()
 
-        def returncoords(self):
-            return list(self.coords)
-
+        # def returncoords(self):
+        #     return list(self.coords)
+    
 
 
 if __name__ == '__main__':
