@@ -6,6 +6,7 @@ from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5.QtWidgets import (
     QApplication,
     QDialog,
+    QWidget,
     QMainWindow,
     QMessageBox,
     QTableWidget,
@@ -15,7 +16,7 @@ from PyQt5.QtWidgets import (
 
 class AddSensor(QDialog):
     # Инициализация диалогового окна для добавления датчика
-    def __init__(self, parent=None, ls=[]):
+    def __init__(self, parent=None, ls=[], coords=[]):
         super(AddSensor, self).__init__(parent)
         self.ui = Ui_add_sensor_Dialog()
         self.ui.setupUi(self)
@@ -23,6 +24,7 @@ class AddSensor(QDialog):
         self.ui.add_pushButton.clicked.connect(self.saveValue)
         self.ui.dateEdit.setCalendarPopup(True)
         self.ui.map_pushButton.clicked.connect(self.mapshow)
+        self.coords = coords
         for i in ls:
             self.ui.type_comboBox.addItem(ls[i], i)
 
@@ -38,26 +40,20 @@ class AddSensor(QDialog):
             serial_number = int(self.ui.serial_number_textEdit.toPlainText())
             type_sens = int(self.ui.type_comboBox.currentData())
             N_S = float(self.ui.N_S_textEdit.toPlainText())
-            S_W = float(self.ui.N_S_textEdit.toPlainText())
+            E_W = float(self.ui.E_W_textEdit.toPlainText())
             date = self.ui.dateEdit.date().toString('dd-MM-yyyy')
             location = self.ui.location_textEdit.toPlainText()
-            sens_value = [name, serial_number, type_sens, N_S, S_W, date, location]
+            sens_value = [name, serial_number, type_sens, N_S, E_W, date, location]
             self.close()
             return sens_value
         except:
             sens_value = []
             return sens_value
 
-
+    # Открытие карты
     def mapshow(self):
-        self.new_map = map.Map()
-        self.new_map.showmap()
-        # view = QtWebEngineWidgets.QWebEngineView()
-        # page = new_map.WebEnginePage(new_map)
-        # new_map.setPage(page)
-        # new_map.setHtml(new_map.date.getvalue().decode())
-        # new_map.show()
-        # new_map.exec_()
+        new_map = map.Map(coords = self.coords)
+        new_map.exec_()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

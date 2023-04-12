@@ -56,10 +56,24 @@ class Application(QMainWindow):
         while Query.next():
             ls[Query.value(0)] = Query.value(1)
 
-        self.new_sens = addsensor.AddSensor(self, ls=ls)
-        self.new_sens.exec_()
+        Query.exec(
+            """
+            SELECT name, N_S, E_W FROM sensors
+            """
+        )
+        
+        coords = []
+        while Query.next():
+            tempcoords = []
+            tempcoords.append(Query.value(0))
+            tempcoords.append(Query.value(1))
+            tempcoords.append(Query.value(2))
+            coords.append(tempcoords)
+
+        new_sens = addsensor.AddSensor(self, ls=ls, coords=coords)
+        new_sens.exec_()
         try:
-            self.savesens(self.new_sens.saveValue())
+            self.savesens(new_sens.saveValue())
         except:
             pass
 
