@@ -1,6 +1,7 @@
 import sys
 from  GUIaddsensor import Ui_add_sensor_Dialog
 import map
+from PyQt5 import QtWebEngineWidgets
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5.QtWidgets import (
     QApplication,
@@ -49,6 +50,18 @@ class AddSensor(QDialog):
 
 
     def mapshow(self):
-        new_map = map.Map(self)
-        new_map.exec_()
+        new_map = map.Map()
+        new_map.information_window.showmap()
+        # view = QtWebEngineWidgets.QWebEngineView()
+        # page = new_map.WebEnginePage(new_map)
+        # new_map.setPage(page)
+        # new_map.setHtml(new_map.date.getvalue().decode())
+        # new_map.show()
+        # new_map.exec_()
 
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    app.setStyle('Fusion')
+    application = AddSensor()
+    application.show()
+    sys.exit(app.exec_())

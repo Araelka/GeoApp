@@ -19,6 +19,7 @@ class Application(QMainWindow):
         self.ui.setupUi(self)
         self.ui.pushButton_2.clicked.connect(self.add_sens)
 
+    
     def showtable(self):
         Query = QSqlQuery()
         Query.exec(
@@ -55,7 +56,7 @@ class Application(QMainWindow):
         while Query.next():
             ls[Query.value(0)] = Query.value(1)
 
-        new_sens = addsensor.AddSensor(self, ls)
+        new_sens = addsensor.AddSensor(self, ls=ls)
         new_sens.exec_()
         try:
             self.savesens(new_sens.saveValue())
