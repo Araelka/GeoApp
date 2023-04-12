@@ -54,6 +54,12 @@ class AddSensor(QDialog):
     def mapshow(self):
         new_map = map.Map(coords = self.coords)
         new_map.exec_()
+        try:
+            coords = new_map.page.returncoords()
+            self.ui.E_W_textEdit.setText(str(coords[0]))
+            self.ui.N_S_textEdit.setText(str(coords[1]))
+        except:
+            pass
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
