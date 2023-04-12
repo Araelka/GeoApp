@@ -56,10 +56,10 @@ class Application(QMainWindow):
         while Query.next():
             ls[Query.value(0)] = Query.value(1)
 
-        new_sens = addsensor.AddSensor(self, ls=ls)
-        new_sens.exec_()
+        self.new_sens = addsensor.AddSensor(self, ls=ls)
+        self.new_sens.exec_()
         try:
-            self.savesens(new_sens.saveValue())
+            self.savesens(self.new_sens.saveValue())
         except:
             pass
 

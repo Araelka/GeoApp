@@ -50,8 +50,8 @@ class AddSensor(QDialog):
 
 
     def mapshow(self):
-        new_map = map.Map()
-        new_map.information_window.showmap()
+        self.new_map = map.Map()
+        self.new_map.showmap()
         # view = QtWebEngineWidgets.QWebEngineView()
         # page = new_map.WebEnginePage(new_map)
         # new_map.setPage(page)

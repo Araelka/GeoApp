@@ -6,10 +6,10 @@ import folium, io, sys, json
 
 
 class Map(QtWebEngineWidgets.QWebEngineView):
-    def __init__(self):
-        super().__init__()      
+    def __init__(self, parent=None):
+        super(Map, self).__init__(parent)      
         self.date = self.initmap()
-        self.information_window = Map()
+
 
     def initmap(self):
         m = folium.Map(location=[55.8527, 37.5689], zoom_start=13)
@@ -75,6 +75,6 @@ if __name__ == '__main__':
     # application.setPage(page)
     # application.setHtml(application.date.getvalue().decode())
     # application.show()
-    application.showmap()
+    # application.showmap()
     # application.show()
     sys.exit(app.exec_())
