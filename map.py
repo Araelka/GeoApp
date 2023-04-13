@@ -40,7 +40,7 @@ class Map(QDialog):
 
 
     def initmap(self):
-        m = folium.Map(location=[51.554021, 83.100586], zoom_start=10)
+        m = folium.Map(location=[51, 82.946], zoom_start=11)
 
         # layout = QVBoxLayout()
         # self.setLayout(layout)
@@ -136,7 +136,10 @@ class Map(QDialog):
         # Добавление датчиков
         try:
             for i in self.coords:
-                folium.Marker(location=[i[1], i[2]], popup='<b>'+str(i[0])+'</b><br /> <b>N/S:</b>'+ str(i[1])+'<br /><b>E/W:</b>' + str(i[2])).add_to(m)
+                folium.Marker(location=[i[1], i[2]], 
+                              icon=folium.Icon(color="red"),
+                              popup='<b>'+str(i[0])+'</b><br /> <b>N/S:</b>'+ str(i[1])+'<br /><b>E/W:</b>' + 
+                              str(i[2])+ '<br /><b>Местоположение:</b>'+ str(i[3])).add_to(m)
         except:
             pass
         data = io.BytesIO()

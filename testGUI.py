@@ -1,7 +1,9 @@
-from GUI import Ui_test
+from mainGUI import Ui_test
+import map
 import sys
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5.QtWidgets import (
+    QHeaderView,
     QApplication,
     QMainWindow,
     QDialog,
@@ -17,32 +19,56 @@ class Application(QMainWindow):
         super(Application, self).__init__()
         self.ui = Ui_test()
         self.ui.setupUi(self)
-        self.ui.pushButton_2.clicked.connect(self.add_sens)
+        self.ui.add_sens_pushButton.clicked.connect(self.add_sens)
+        self.ui.show_sens_pushButton.clicked.connect(self.showtable)
+        self.ui.add_db_date_pushButton.clicked.connect(self.showmap)
 
     
     def showtable(self):
+        self.ui.tableWidget.clear()
+        self.ui.tableWidget.setRowCount(0)
         Query = QSqlQuery()
         Query.exec(
             """
-            SELECT sensors.uid_sensor, type_sensors.type, sensors.location
+            SELECT sensors.name, sensors.serial_number, type_sensors.type, sensors.N_S, sensors.E_W, sensors.installation_date, sensors.location
             FROM sensors
             JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type;
             """
         )
-
-        self.ui.tableWidget.setColumnCount(3)
-        self.ui.tableWidget.setHorizontalHeaderLabels(['Id Датчика', 'Тип сенсора', 'Местоположение'])
+        self.ui.tableWidget.setColumnCount(7)
+        self.ui.tableWidget.setHorizontalHeaderLabels(['Название', 'Серийный номер', 'Тип', 'N/S', 'E/W', 'Дата установки', 'Местоположение'])
         while Query.next():
             rows = self.ui.tableWidget.rowCount()
             self.ui.tableWidget.setRowCount(rows + 1)
             i = 0
-            for i in range(3):
+            for i in range(7):
                 self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
-            # self.ui.tableWidget.setItem(rows, 1, QTableWidgetItem(str(Query.value(1))))
-            # self.ui.tableWidget.setItem(rows, 2, QTableWidgetItem(str(Query.value(2))))
-            # self.ui.tableWidget.setItem(rows, 3, QTableWidgetItem(str(Query.value(3))))
-        # self.ui.tableWidget.resizeColumnsToContents()
-        # self.setCentralWidget(self.ui.tableWidget)
+        
+        self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+
+    def coords_sens(self):
+        Query = QSqlQuery()
+        Query.exec(
+            """
+            SELECT name, N_S, E_W, location FROM sensors
+            """
+        )
+        
+        coords = []
+        while Query.next():
+            tempcoords = []
+            tempcoords.append(Query.value(0))
+            tempcoords.append(Query.value(1))
+            tempcoords.append(Query.value(2))
+            tempcoords.append(Query.value(3))
+            coords.append(tempcoords)
+        
+        return coords
+
+    def showmap(self):
+        new_map = map.Map(coords =  self.coords_sens())
+        new_map.exec_()
 
     def add_sens(self):
         Query = QSqlQuery()
@@ -56,19 +82,8 @@ class Application(QMainWindow):
         while Query.next():
             ls[Query.value(0)] = Query.value(1)
 
-        Query.exec(
-            """
-            SELECT name, N_S, E_W FROM sensors
-            """
-        )
-        
-        coords = []
-        while Query.next():
-            tempcoords = []
-            tempcoords.append(Query.value(0))
-            tempcoords.append(Query.value(1))
-            tempcoords.append(Query.value(2))
-            coords.append(tempcoords)
+
+        coords = self.coords_sens()
 
         new_sens = addsensor.AddSensor(self, ls=ls, coords=coords)
         new_sens.exec_()
