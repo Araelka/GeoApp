@@ -2,10 +2,12 @@ from mainGUI import Ui_test
 import map
 import sys
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import (
     QHeaderView,
     QApplication,
     QMainWindow,
+    QWidget,
     QDialog,
     QFileDialog,
     QMessageBox,
@@ -16,6 +18,7 @@ import pandas as pd
 
 import addsensor
 import adddatatodb
+import checkdata
 
 class Application(QMainWindow):
     def __init__(self):
@@ -72,16 +75,19 @@ class Application(QMainWindow):
         except:
             pass
 
+
+
     # Отображение всех данных
     def showalldb(self):
         Query = QSqlQuery()
         Query.exec(
             """
-            SELECT sensors.name, sensors.serial_number, type_sensors.type,
+            SELECT observations.mark, observations.uid_observations,
+            sensors.name, sensors.serial_number, type_sensors.type,
             observations.date, observations.time, 
             water_content.value, current.value, PAR.value, temperature_air.value,
             RH.value, wind_speed.value, gust_speed.value, wind_direction.value,
-            temperature_ground.value, pressure.value, rain.value, solar_radiation.value, 
+            temperature_ground.value, pressure.value, rain.value, solar_radiation.value,
             observations.mark
             FROM observations
             LEFT JOIN sensors ON sensors.uid_sensor = observations.uid_sensor
@@ -104,21 +110,63 @@ class Application(QMainWindow):
 
         self.ui.tableWidget.clear()
         self.ui.tableWidget.setRowCount(0)
-        self.ui.tableWidget.setColumnCount(18)
-        self.ui.tableWidget.setHorizontalHeaderLabels(['Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
+        self.ui.tableWidget.setColumnCount(20)
+        self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
                                                        'Water Content, m³/m³', 'Current, mA', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
                                                        'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
                                                        'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²', 'Корректность'])
+        
+
+        # Изменение метки корректности
+        def changeS():
+            row = self.ui.tableWidget.currentRow()
+
+            if CheckBox[row].isChecked() == True:
+                mark = 1
+                self.ui.tableWidget.setItem(row, 19, QTableWidgetItem(str("Верно")))
+                if row%2 ==1:
+                    self.ui.tableWidget.item(row, 19).setBackground(QtGui.QColor(202, 204, 206))
+            else:
+                mark = 0
+                self.ui.tableWidget.setItem(row, 19, QTableWidgetItem(str("Ошибка")))
+                if row%2 ==1:
+                    self.ui.tableWidget.item(row, 19).setBackground(QtGui.QColor(202, 204, 206))
+
+            Query.exec(
+                f"""
+                UPDATE observations
+                SET mark = {mark}
+                WHERE uid_observations = {id}
+                """
+            )
+
+        CheckBox = []
+
         while Query.next():
+            CheckBox.append(QtWidgets.QCheckBox())
             rows = self.ui.tableWidget.rowCount()
             self.ui.tableWidget.setRowCount(rows + 1)
             i = 0
-            for i in range(18):
+            for i in range(20):
                 self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
-            if Query.value(17) == 1:
-                self.ui.tableWidget.setItem(rows, 17, QTableWidgetItem(str("Верно")))
+                if rows%2 ==1:
+                    self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
+  
+            if Query.value(0) == 1:
+                self.ui.tableWidget.setItem(rows, 19, QTableWidgetItem(str("Верно")))
+                if rows%2 ==1:
+                    self.ui.tableWidget.item(rows, 19).setBackground(QtGui.QColor(202, 204, 206))
+                CheckBox[-1].setChecked(True)
+                self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
+                CheckBox[-1].stateChanged.connect(changeS)
             else:
-                self.ui.tableWidget.setItem(rows, 17, QTableWidgetItem(str("Ошибка данных")))
+                self.ui.tableWidget.setItem(rows, 19, QTableWidgetItem(str("Ошибка")))
+                if rows%2 ==1:
+                    self.ui.tableWidget.item(rows, 19).setBackground(QtGui.QColor(202, 204, 206))
+                self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
+                CheckBox[-1].stateChanged.connect(changeS)
+
+        
         
         self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
@@ -151,6 +199,14 @@ class Application(QMainWindow):
         windowdate = adddatatodb.Adddatatodb(self, sens, headers)
         windowdate.exec_()
 
+        checkwindow = checkdata.DataCheck(self)
+        checkwindow.exec_()
+
+        try:
+            temp_check = checkwindow.temp
+            RH_check = checkwindow.RH
+        except:
+            pass
         
         try:
             sensor = windowdate.sensor
@@ -231,17 +287,40 @@ class Application(QMainWindow):
                 # Загрузка temperature_air
                 try:
                     if airtype == 1:
+                        temp = float(self.df.iat[i,temp_air])
+                        if temp < temp_check[0] or temp > temp_check[1]:
+                            Query.exec(
+                            f"""
+                            UPDATE observations
+                            SET mark = 0
+                            WHERE uid_observations = {id}
+                            """
+                        )
+
+
+
                         Query.exec(
                             f"""
                             INSERT INTO temperature_air (uid_observations, value)
-                            VALUES ({int(id)}, {round(float(self.df.iat[i,temp_air]), 1)}) 
+                            VALUES ({int(id)}, {round(temp, 1)}) 
                             """
                         )
                     else:
+                        temp = float((5/9)*(float(self.df.iat[i,temp_air])-32))
+                        if temp < temp_check[0] or temp > temp_check[1]:
+                            Query.exec(
+                            f"""
+                            UPDATE observations
+                            SET mark = 0
+                            WHERE uid_observations = {id}
+                            """
+                        )
+
+
                         Query.exec(
                             f"""
                             INSERT INTO temperature_air (uid_observations, value)
-                            VALUES ({int(id)}, {round(float((5/9)*(float(self.df.iat[i,temp_air])-32)), 1)}) 
+                            VALUES ({int(id)}, {round(temp, 1)}) 
                             """
                         )
                 except:
@@ -249,6 +328,16 @@ class Application(QMainWindow):
                 
                 # Загрузка RH
                 try:
+                    if float(self.df.iat[i,RH]) < RH_check[0] or float(self.df.iat[i,RH]) > RH_check[1]:
+                        Query.exec(
+                        f"""
+                        UPDATE observations
+                        SET mark = 0
+                        WHERE uid_observations = {id}
+                        """
+                    )
+
+
                     Query.exec(
                         f"""
                         INSERT INTO RH (uid_observations, value)
@@ -360,17 +449,38 @@ class Application(QMainWindow):
                 # Загрузка temperature_ground
                 try:
                     if groundtype == 1:
+                        temp = float(self.df.iat[i,temp_ground])
+                        if temp < temp_check[0] or temp > temp_check[1]:
+                            Query.exec(
+                            f"""
+                            UPDATE observations
+                            SET mark = 0
+                            WHERE uid_observations = {id}
+                            """
+                            )
+
+
                         Query.exec(
                             f"""
                             INSERT INTO temperature_ground (uid_observations, value)
-                            VALUES ({int(id)}, {round(float(self.df.iat[i,temp_ground]), 3)}) 
+                            VALUES ({int(id)}, {round(temp, 3)}) 
                             """
                         )
                     else:
+                        temp = float((5/9)*(float(self.df.iat[i,temp_ground])-32))
+                        if temp < temp_check[0] or temp > temp_check[1]:
+                            Query.exec(
+                            f"""
+                            UPDATE observations
+                            SET mark = 0
+                            WHERE uid_observations = {id}
+                            """
+                            )
+
                         Query.exec(
                             f"""
                             INSERT INTO temperature_ground (uid_observations, value)
-                            VALUES ({int(id)}, {round(float((5/9)*(float(self.df.iat[i,temp_ground])-32)), 3)}) 
+                            VALUES ({int(id)}, {round(temp, 3)}) 
                             """
                         )
                 except:
