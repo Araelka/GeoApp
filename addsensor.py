@@ -41,7 +41,7 @@ class AddSensor(QDialog):
             type_sens = int(self.ui.type_comboBox.currentData())
             N_S = float(self.ui.N_S_textEdit.toPlainText())
             E_W = float(self.ui.E_W_textEdit.toPlainText())
-            date = self.ui.dateEdit.date().toString('dd-MM-yyyy')
+            date = self.ui.dateEdit.date().toString('yyyy-MM-dd')
             location = self.ui.location_textEdit.toPlainText()
             sens_value = [name, serial_number, type_sens, N_S, E_W, date, location]
             self.close()

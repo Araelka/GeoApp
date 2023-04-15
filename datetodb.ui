@@ -668,16 +668,6 @@
            <pointsize>14</pointsize>
           </font>
          </property>
-         <item>
-          <property name="text">
-           <string>°F</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>°C</string>
-          </property>
-         </item>
         </widget>
        </item>
        <item>
@@ -1132,16 +1122,6 @@
            <pointsize>14</pointsize>
           </font>
          </property>
-         <item>
-          <property name="text">
-           <string>°F</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>°C</string>
-          </property>
-         </item>
         </widget>
        </item>
        <item>
