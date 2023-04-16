@@ -1,8 +1,8 @@
-from mainGUI import Ui_test
+from GUImainwindowd import Ui_MainWindow
 import map
 import sys
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import (
     QHeaderView,
     QApplication,
@@ -23,14 +23,23 @@ import checkdata
 class Application(QMainWindow):
     def __init__(self):
         super(Application, self).__init__()
-        self.ui = Ui_test()
+        self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.add_sens_pushButton.clicked.connect(self.add_sens)
-        self.ui.show_sens_pushButton.clicked.connect(self.showsensor)
-        # self.ui.add_db_date_pushButton.clicked.connect(self.showmap)
-        self.ui.add_date_pushButton.clicked.connect(self.uploadfile)
-        self.ui.show_date_db_pushButton.clicked.connect(self.showalldb)
-        self.ui.add_db_date_pushButton.clicked.connect(self.showadata)
+        self.ui.pushButton.clicked.connect(self.showtable)
+        self.ui.show_map_sensors_action.triggered.connect(self.showmap)
+        self.ui.add_sensor_action.triggered.connect(self.add_sens)
+        self.ui.show_senssors_action.triggered.connect(self.showsensor)
+        self.ui.load_action.triggered.connect(self.uploadfile)
+        self.ui.add_data_to_DB_action.triggered.connect(self.loaddatatoDB)
+        self.ui.dateTimeEdit_max.setDateTime(QtCore.QDateTime().currentDateTime())
+        sensors = self.sensors()
+        for i in sensors:
+            self.ui.sensors_comboBox.addItem(sensors[i], i)
+        typetable = self.typetable()
+        for i in typetable:
+            self.ui.type_comboBox.addItem(i, typetable[i])
+
+
     
     # Загрузка данных из в файла в dataframe
     def uploadfile(self):
@@ -50,6 +59,45 @@ class Application(QMainWindow):
             self.df = self.df.drop(columns=self.df.columns[2])
             self.showlastfile(self.df)
 
+
+    # Получение всех датчиков
+    def sensors(self):
+        Query = QSqlQuery()
+        Query.exec(
+            """
+            SELECT sensors.uid_sensor, sensors.name, sensors.serial_number, type_sensors.type, sensors.location
+            FROM sensors
+            JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type;
+            """
+        )
+
+        sensors = {}
+        sensors[-1] = 'Все'
+        while Query.next():
+            sensors[Query.value(0)] = str(Query.value(1)) + ' | ' + str(Query.value(2)) + ' | ' + str(Query.value(3)) + ' | ' + str(Query.value(4))
+
+        return sensors
+    
+    # Типы таблицы
+    def typetable(self):
+        typename = ['Water Content, m³/m³', 'Current, mA', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
+                    'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
+                    'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²']
+        
+        tablename = ['water_content', 'current', 'PAR', 'temperature_air', 'RH', 
+                     'wind_speed', 'gust_speed', 'wind_direction', 'temperature_ground',
+                     'pressure', 'rain', 'solar_radiation']
+        
+        typetb = {}
+        typetb['Все'] = 'Все'
+        j = 0
+        for i in typename:
+            typetb[i] = tablename[j]
+            j += 1
+
+        return typetb
+
+# 
     # Отрисовка последнего или переданного datafrema
     def showlastfile(self, df):
         try:
@@ -77,21 +125,42 @@ class Application(QMainWindow):
 
 
 
-    # Отображение всех данных
-    def showalldb(self):
+    # Отображение всех данных с возможностью выборки
+    def showtable(self):
         Query = QSqlQuery()
-        Query.exec(
-            """
-            SELECT observations.mark, observations.uid_observations,
-            sensors.name, sensors.serial_number, type_sensors.type,
-            observations.date, observations.time, 
+
+        if self.ui.date_checkBox.isChecked() == True:
+            datacheck = f"WHERE observations.date >= '{self.ui.dateTimeEdit_min.date().toPyDate()}' AND observations.date <= '{self.ui.dateTimeEdit_max.date().toPyDate()}'"  
+            timecheck = f"AND observations.time >= '{self.ui.dateTimeEdit_min.time().toPyTime()}' AND observations.time <= '{self.ui.dateTimeEdit_max.time().toPyTime()}'" 
+            ch = 1
+        else:
+            datacheck = ''
+            timecheck = ''
+            ch = 0
+
+        if self.ui.sensor_checkBox.isChecked() == True and int(self.ui.sensors_comboBox.currentData()) > -1:
+            if ch == 1:
+                w = 'AND'
+            else:
+                w = 'WHERE'
+            sensorcheck = f"{w} sensors.uid_sensor == {int(self.ui.sensors_comboBox.currentData())}"
+            ch = 1
+        else:
+            sensorcheck = ''
+            ch = 0
+
+        if self.ui.type_checkBox.isChecked() == True and str(self.ui.type_comboBox.currentData()) != 'Все':   
+            datetype = f"{str(self.ui.type_comboBox.currentData())}.value,"
+            typecheck = f"LEFT JOIN {str(self.ui.type_comboBox.currentData())} ON {str(self.ui.type_comboBox.currentData())}.uid_observations = observations.uid_observations"
+            NH = 9
+        else:
+            datetype = """
             water_content.value, current.value, PAR.value, temperature_air.value,
             RH.value, wind_speed.value, gust_speed.value, wind_direction.value,
             temperature_ground.value, pressure.value, rain.value, solar_radiation.value,
-            observations.mark
-            FROM observations
-            LEFT JOIN sensors ON sensors.uid_sensor = observations.uid_sensor
-            LEFT JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type
+            """
+
+            typecheck = """
             LEFT JOIN water_content ON water_content.uid_observations = observations.uid_observations
             LEFT JOIN current ON current.uid_observations = observations.uid_observations
             LEFT JOIN PAR ON PAR.uid_observations = observations.uid_observations
@@ -103,34 +172,59 @@ class Application(QMainWindow):
             LEFT JOIN temperature_ground ON temperature_ground.uid_observations = observations.uid_observations
             LEFT JOIN pressure ON pressure.uid_observations = observations.uid_observations
             LEFT JOIN rain ON rain.uid_observations = observations.uid_observations
-            LEFT JOIN solar_radiation ON solar_radiation.uid_observations = observations.uid_observations
+            LEFT JOIN solar_radiation ON solar_radiation.uid_observations = observations.uid_observations"""
+        
+            NH = 20
+
+
+        Query.exec(
+            f"""
+            SELECT observations.mark, observations.uid_observations,
+            sensors.name, sensors.serial_number, type_sensors.type,
+            observations.date, observations.time, 
+            {datetype}
+            observations.mark
+            FROM observations
+            LEFT JOIN sensors ON sensors.uid_sensor = observations.uid_sensor
+            LEFT JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type
+            {typecheck}
+            {datacheck}
+            {timecheck}
+            {sensorcheck}
             """
         )
+
+        # print(Query.executedQuery())
 
 
         self.ui.tableWidget.clear()
         self.ui.tableWidget.setRowCount(0)
-        self.ui.tableWidget.setColumnCount(20)
-        self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
-                                                       'Water Content, m³/m³', 'Current, mA', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
-                                                       'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
-                                                       'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²', 'Корректность'])
+        self.ui.tableWidget.setColumnCount(NH)
+        if NH == 20:
+            self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
+                                                        'Water Content, m³/m³', 'Current, mA', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
+                                                        'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
+                                                        'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²', 'Корректность'])
+        else:
+            self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
+                                                        f'{str(self.ui.type_comboBox.currentText())}', 'Корректность'])
+
         
 
         # Изменение метки корректности
         def changeS():
             row = self.ui.tableWidget.currentRow()
-
+            id = int(self.ui.tableWidget.item(row, 1).text())
             if CheckBox[row].isChecked() == True:
                 mark = 1
-                self.ui.tableWidget.setItem(row, 19, QTableWidgetItem(str("Верно")))
+                self.ui.tableWidget.setItem(row, (NH-1), QTableWidgetItem(str("Верно")))
                 if row%2 ==1:
-                    self.ui.tableWidget.item(row, 19).setBackground(QtGui.QColor(202, 204, 206))
+                    self.ui.tableWidget.item(row, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
             else:
                 mark = 0
-                self.ui.tableWidget.setItem(row, 19, QTableWidgetItem(str("Ошибка")))
+                self.ui.tableWidget.setItem(row, (NH-1), QTableWidgetItem(str("Ошибка")))
                 if row%2 ==1:
-                    self.ui.tableWidget.item(row, 19).setBackground(QtGui.QColor(202, 204, 206))
+                    self.ui.tableWidget.item(row, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
 
             Query.exec(
                 f"""
@@ -147,22 +241,22 @@ class Application(QMainWindow):
             rows = self.ui.tableWidget.rowCount()
             self.ui.tableWidget.setRowCount(rows + 1)
             i = 0
-            for i in range(20):
+            for i in range(NH):
                 self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
                 if rows%2 ==1:
                     self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
   
             if Query.value(0) == 1:
-                self.ui.tableWidget.setItem(rows, 19, QTableWidgetItem(str("Верно")))
+                self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Верно")))
                 if rows%2 ==1:
-                    self.ui.tableWidget.item(rows, 19).setBackground(QtGui.QColor(202, 204, 206))
+                    self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
                 CheckBox[-1].setChecked(True)
                 self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
                 CheckBox[-1].stateChanged.connect(changeS)
             else:
-                self.ui.tableWidget.setItem(rows, 19, QTableWidgetItem(str("Ошибка")))
+                self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Ошибка")))
                 if rows%2 ==1:
-                    self.ui.tableWidget.item(rows, 19).setBackground(QtGui.QColor(202, 204, 206))
+                    self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
                 self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
                 CheckBox[-1].stateChanged.connect(changeS)
 
@@ -172,7 +266,7 @@ class Application(QMainWindow):
         self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
 
     # Открытие окна с сотношением столбцов и загрузка в базу
-    def showadata(self):
+    def loaddatatoDB(self):
         Query = QSqlQuery()
         Query.exec(
             """
@@ -511,6 +605,8 @@ class Application(QMainWindow):
             i = 0
             for i in range(7):
                 self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
+                if rows%2 ==1:
+                    self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
         
         self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
@@ -537,7 +633,7 @@ class Application(QMainWindow):
 
     # Карта с датчиками
     def showmap(self):
-        new_map = map.Map(coords =  self.coords_sens())
+        new_map = map.Map(coords = self.coords_sens())
         new_map.exec_()
 
     # Открытие окна с добавлением датчика
