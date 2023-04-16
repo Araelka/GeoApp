@@ -628,8 +628,8 @@ class Application(QMainWindow):
                 if rows%2 ==1:
                     self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
         
-        self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+        # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
 
     # Нахождение координат датчиков
     def coords_sens(self):
