@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QMessageBox,
     QTableWidget,
+    QStyle,
     QTableWidgetItem,
 )
 import pandas as pd
@@ -38,6 +39,15 @@ class Application(QMainWindow):
         typetable = self.typetable()
         for i in typetable:
             self.ui.type_comboBox.addItem(i, typetable[i])
+        self.ui.tableWidget.viewport().installEventFilter(self)
+
+    def eventFilter(self, source, event):
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            if event.button() == QtCore.Qt.LeftButton:
+                return 0
+            elif event.button() == QtCore.Qt.RightButton:
+                print("Правая")
+        return super().eventFilter(source, event)
 
 
     
@@ -48,7 +58,7 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                self.df = self.df.loc[0:10]
+                self.df = self.df.loc[0:250]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
@@ -100,6 +110,7 @@ class Application(QMainWindow):
 # 
     # Отрисовка последнего или переданного datafrema
     def showlastfile(self, df):
+        self.ui.tableWidget.clear()
         try:
             if df==False:
                 try:
@@ -118,8 +129,8 @@ class Application(QMainWindow):
                 for j in range (len(df.columns)):
                     self.ui.tableWidget.setItem(i, j, QTableWidgetItem(str(df.iat[i,j])))
 
-            self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-            self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+            # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
         except:
             pass
 
@@ -150,8 +161,12 @@ class Application(QMainWindow):
             ch = 0
 
         if self.ui.type_checkBox.isChecked() == True and str(self.ui.type_comboBox.currentData()) != 'Все':   
+            if ch == 1:
+                w = "AND"
+            else:
+                w = "WHERE"
             datetype = f"{str(self.ui.type_comboBox.currentData())}.value,"
-            typecheck = f"LEFT JOIN {str(self.ui.type_comboBox.currentData())} ON {str(self.ui.type_comboBox.currentData())}.uid_observations = observations.uid_observations"
+            typecheck = f"JOIN {str(self.ui.type_comboBox.currentData())} ON {str(self.ui.type_comboBox.currentData())}.uid_observations = observations.uid_observations"
             NH = 9
         else:
             datetype = """
@@ -236,34 +251,39 @@ class Application(QMainWindow):
 
         CheckBox = []
 
-        while Query.next():
-            CheckBox.append(QtWidgets.QCheckBox())
-            rows = self.ui.tableWidget.rowCount()
-            self.ui.tableWidget.setRowCount(rows + 1)
-            i = 0
-            for i in range(NH):
-                self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
-                if rows%2 ==1:
-                    self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
-  
-            if Query.value(0) == 1:
-                self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Верно")))
-                if rows%2 ==1:
-                    self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
-                CheckBox[-1].setChecked(True)
-                self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
-                CheckBox[-1].stateChanged.connect(changeS)
-            else:
-                self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Ошибка")))
-                if rows%2 ==1:
-                    self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
-                self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
-                CheckBox[-1].stateChanged.connect(changeS)
+        try:
+            while Query.next():
+                CheckBox.append(QtWidgets.QCheckBox())
+                rows = self.ui.tableWidget.rowCount()
+                self.ui.tableWidget.setRowCount(rows + 1)
+                i = 0
+                for i in range(NH):
+                    self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
+                    if rows%2 ==1:
+                        self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
+    
+                if Query.value(0) == 1:
+                    self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Верно")))
+                    if rows%2 ==1:
+                        self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
+                    CheckBox[-1].setChecked(True)
+                    self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
+                    CheckBox[-1].stateChanged.connect(changeS)
+                else:
+                    self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Ошибка")))
+                    if rows%2 ==1:
+                        self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
+                    self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
+                    CheckBox[-1].stateChanged.connect(changeS)
+                
+                # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+                # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
 
+        except:
+            QMessageBox.about(self, "Данные", "Произошла ошибка отображения")
+    
         
-        
-        self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+  
 
     # Открытие окна с сотношением столбцов и загрузка в базу
     def loaddatatoDB(self):
