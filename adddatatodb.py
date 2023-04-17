@@ -42,6 +42,7 @@ class Adddatatodb(QDialog):
             
 
         self.ui.add_date_to_db_pushButton.clicked.connect(self.adddatabutton)
+        self.isClose = 0
 
     def adddatabutton(self):
         try:
@@ -107,4 +108,5 @@ class Adddatatodb(QDialog):
         except:
             pass
 
+        self.isClose = 1    
         self.close()

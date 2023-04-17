@@ -17,6 +17,8 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
 )
 import pandas as pd
+import matplotlib.pyplot as plt   
+from datetime import datetime
 
 import addsensor
 import adddatatodb
@@ -43,7 +45,8 @@ class Application(QMainWindow):
         self.ui.tableWidget.viewport().installEventFilter(self) # для фильтрации кнопок
         self.ui.max_action.triggered.connect(self.MAX)
         self.ui.min_action.triggered.connect(self.MIN)
-        self.ui.mean_action.triggered.connect(self.MEAN)
+        # self.ui.mean_action.triggered.connect(self.MEAN)
+        self.ui.mean_action.triggered.connect(self.ShowPlot)
 
 
     # Фильтр на нажание кнопой ЛЕвая или правая
@@ -141,6 +144,34 @@ class Application(QMainWindow):
             pass
 
 
+
+    # Отрисовка графиков
+    def ShowPlot(self):
+        tempdate = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        tempframe = []
+        try:
+            for row in range (rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    tempdate.append(datetime.strptime(self.ui.tableWidget.item(row , 5).text() + ' ' + self.ui.tableWidget.item(row , 6).text(), '%Y-%m-%d %H:%M:%S'))
+                    tempframe.append(float(self.ui.tableWidget.item(row , column).text()))
+            plt.plot(tempdate, tempframe, label = self.ui.tableWidget.horizontalHeaderItem(column).text())
+            # for row in range(rows):
+            #     if self.ui.tableWidget.item(row, column).text() != '':
+                    # for j in range (self.ui.tableWidget.rowCount()):
+                    # tempframe.append(float(self.ui.tableWidget.item(row , column).text()))
+                    # plt.plot(tempframe)
+  
+            plt.title("График " + self.ui.tableWidget.horizontalHeaderItem(column).text())
+            plt.xticks(rotation = 90)
+            plt.xlabel(self.ui.tableWidget.horizontalHeaderItem(5).text() + ' ' + self.ui.tableWidget.horizontalHeaderItem(6).text())
+            plt.ylabel(self.ui.tableWidget.horizontalHeaderItem(column).text()) # Ошибка, не может получить текст
+            plt.legend()
+            #plt.get_current_fig_manager().window.showMaximized() - развернуть график на весь экран по умолчанию
+            plt.show()
+        except Exception as e: 
+            print(e)
 
     # Отображение всех данных с возможностью выборки
     def showtable(self):
@@ -358,6 +389,9 @@ class Application(QMainWindow):
 
         windowdate = adddatatodb.Adddatatodb(self, sens, headers)
         windowdate.exec_()
+        
+        if windowdate.isClose == 0:
+            return 0
 
         checkwindow = checkdata.DataCheck(self)
         checkwindow.exec_()
