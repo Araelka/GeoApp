@@ -1,6 +1,7 @@
 from GUImainwindowd import Ui_MainWindow
 import map
 import sys
+from statistics import mean
 from PyQt5.QtSql import QSqlDatabase, QSqlQuery
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import (
@@ -31,7 +32,7 @@ class Application(QMainWindow):
         self.ui.add_sensor_action.triggered.connect(self.add_sens)
         self.ui.show_senssors_action.triggered.connect(self.showsensor)
         self.ui.load_action.triggered.connect(self.uploadfile)
-        self.ui.add_data_to_DB_action.triggered.connect(self.loaddatatoDB)
+        self.ui.add_data_to_DB_action.triggered.connect(self.loadfiletoDB)
         self.ui.dateTimeEdit_max.setDateTime(QtCore.QDateTime().currentDateTime())
         sensors = self.sensors()
         for i in sensors:
@@ -39,8 +40,13 @@ class Application(QMainWindow):
         typetable = self.typetable()
         for i in typetable:
             self.ui.type_comboBox.addItem(i, typetable[i])
-        self.ui.tableWidget.viewport().installEventFilter(self)
+        self.ui.tableWidget.viewport().installEventFilter(self) # для фильтрации кнопок
+        self.ui.max_action.triggered.connect(self.MAX)
+        self.ui.min_action.triggered.connect(self.MIN)
+        self.ui.mean_action.triggered.connect(self.MEAN)
 
+
+    # Фильтр на нажание кнопой ЛЕвая или правая
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.MouseButtonPress:
             if event.button() == QtCore.Qt.LeftButton:
@@ -58,7 +64,7 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                self.df = self.df.loc[0:250]
+                self.df = self.df.loc[0:20]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
@@ -141,12 +147,10 @@ class Application(QMainWindow):
         Query = QSqlQuery()
 
         if self.ui.date_checkBox.isChecked() == True:
-            datacheck = f"WHERE observations.date >= '{self.ui.dateTimeEdit_min.date().toPyDate()}' AND observations.date <= '{self.ui.dateTimeEdit_max.date().toPyDate()}'"  
-            timecheck = f"AND observations.time >= '{self.ui.dateTimeEdit_min.time().toPyTime()}' AND observations.time <= '{self.ui.dateTimeEdit_max.time().toPyTime()}'" 
+            datacheck = f"WHERE datetime(observations.date,  observations.time) >= '{self.ui.dateTimeEdit_min.dateTime().toPyDateTime()}' AND datetime(observations.date, observations.time) <= '{self.ui.dateTimeEdit_max.dateTime().toPyDateTime()}'"
             ch = 1
         else:
             datacheck = ''
-            timecheck = ''
             ch = 0
 
         if self.ui.sensor_checkBox.isChecked() == True and int(self.ui.sensors_comboBox.currentData()) > -1:
@@ -204,7 +208,6 @@ class Application(QMainWindow):
             LEFT JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type
             {typecheck}
             {datacheck}
-            {timecheck}
             {sensorcheck}
             """
         )
@@ -283,10 +286,53 @@ class Application(QMainWindow):
             QMessageBox.about(self, "Данные", "Произошла ошибка отображения")
     
         
-  
+    def MAX(self):
+        max_list = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        try:
+            for row in range(rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    max_list.append(float(self.ui.tableWidget.item(row, column).text()))
+            mbox = QMessageBox()
+            mbox.setText("Максимум по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(max(max_list)))
+            mbox.setWindowTitle("Максимум")
+            mbox.exec_()
+        except:
+            pass
+
+    def MIN(self):
+        min_list = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        try:
+            for row in range(rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    min_list.append(float(self.ui.tableWidget.item(row, column).text()))
+            mbox = QMessageBox()
+            mbox.setText("Минимум по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(min(min_list)))
+            mbox.setWindowTitle("Минимум")
+            mbox.exec_()
+        except:
+            pass
+
+    def MEAN(self):
+        mean_list = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        try:
+            for row in range(rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    mean_list.append(float(self.ui.tableWidget.item(row, column).text()))
+            mbox = QMessageBox()
+            mbox.setText("Среднее по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(round(mean(mean_list), 2)))
+            mbox.setWindowTitle("Среднее")
+            mbox.exec_()
+        except:
+            pass
 
     # Открытие окна с сотношением столбцов и загрузка в базу
-    def loaddatatoDB(self):
+    def loadfiletoDB(self):
         Query = QSqlQuery()
         Query.exec(
             """

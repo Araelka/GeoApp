@@ -254,7 +254,7 @@
      <x>0</x>
      <y>0</y>
      <width>1059</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
@@ -276,7 +276,16 @@
     <property name="title">
      <string>Данные</string>
     </property>
+    <widget class="QMenu" name="menu_4">
+     <property name="title">
+      <string>Вычислить</string>
+     </property>
+     <addaction name="max_action"/>
+     <addaction name="min_action"/>
+     <addaction name="mean_action"/>
+    </widget>
     <addaction name="add_data_to_DB_action"/>
+    <addaction name="menu_4"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -311,6 +320,21 @@
   <action name="add_data_to_DB_action">
    <property name="text">
     <string>Загрузить</string>
+   </property>
+  </action>
+  <action name="max_action">
+   <property name="text">
+    <string>Максимум</string>
+   </property>
+  </action>
+  <action name="min_action">
+   <property name="text">
+    <string>Минимум</string>
+   </property>
+  </action>
+  <action name="mean_action">
+   <property name="text">
+    <string>Среднее</string>
    </property>
   </action>
  </widget>
