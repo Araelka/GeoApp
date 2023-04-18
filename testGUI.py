@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (
 )
 import pandas as pd
 import matplotlib.pyplot as plt   
-from datetime import datetime
+from datetime import datetime, date
 
 import addsensor
 import adddatatodb
@@ -46,7 +46,7 @@ class Application(QMainWindow):
         self.ui.max_action.triggered.connect(self.MAX)
         self.ui.min_action.triggered.connect(self.MIN)
         # self.ui.mean_action.triggered.connect(self.MEAN)
-        self.ui.mean_action.triggered.connect(self.ShowPlot)
+        self.ui.mean_action.triggered.connect(self.DayGroup)
 
 
     # Фильтр на нажание кнопой ЛЕвая или правая
@@ -684,7 +684,56 @@ class Application(QMainWindow):
             QMessageBox.about(self, "Загрузка данных", "Не удалось загрузить данные\nПроверьте сотношение столбцов")
 
 
-        
+
+    # Группировка по дню, для срочных даннных
+    def DayGroup(self):
+        try:
+            df = {"Дата": [], "Temperature Air, °C": [], "Temperature Ground, °C": []}
+            df = pd.DataFrame(df)
+            rows = self.ui.tableWidget.rowCount()
+            columns = self.ui.tableWidget.columnCount()
+            headers = []
+            for column in range(columns):
+                headers.append(self.ui.tableWidget.horizontalHeaderItem(column).text())
+            sensor = headers.index('Датчик')
+            date = headers.index('Дата')
+            time = headers.index('Время')
+            col_air = headers.index("Temperature Air, °C")
+            col_ground = headers.index("Temperature Ground, °C")
+            # Сделать 2 датафрейма
+            for row in range(rows):
+                row = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
+                       float(self.ui.tableWidget.item(row , col_air).text()), float(self.ui.tableWidget.item(row , col_ground).text())]
+                df.loc[len(df.index)] = row
+            
+            # print(df)
+            res_min = df.groupby(pd.Grouper(key=df.columns[0], freq='D')).min().reset_index()
+            res = df.groupby(pd.Grouper(key=df.columns[0], freq='D')).mean().reset_index()
+            res_max = df.groupby(pd.Grouper(key=df.columns[0], freq='D')).max().reset_index()
+            res['Дата'] = pd.to_datetime(res["Дата"]).dt.date
+            res = res.round(2)
+            res_min = res.round(2)
+            res_max = res.round(2)
+            # print(res)
+            rows = (len(res.axes[0]))
+            columns = (len(res.axes[1]))
+            row = 0
+            self.ui.tableWidget.clear()
+            self.ui.tableWidget.setRowCount(0)
+            self.ui.tableWidget.setColumnCount(7)
+            self.ui.tableWidget.setHorizontalHeaderLabels(['Дата', 'Temperature Air, °C Минимум', 'Temperature Ground, °C Минимум', 'Temperature Air, °C Среднее', 'Temperature Ground, °C Среднее', 'Temperature Air, °C Максимум', 'Temperature Ground, °C Максимум'])
+            # Изменить цикл для 2 датафреймов
+            for j in range(3):
+                for row in range(rows):
+                    self.ui.tableWidget.setRowCount(row+1)
+                    for column in range(columns):
+                        self.ui.tableWidget.setItem(row, column, QTableWidgetItem(str(res_min[res_min.columns[column]].iloc[row])))
+                        if row%2 ==1:
+                            self.ui.tableWidget.item(row, column).setBackground(QtGui.QColor(202, 204, 206))
+        except:
+            pass
+
+
     # Показать датчики из базы
     def showsensor(self):
         self.ui.tableWidget.clear()
