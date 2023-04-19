@@ -1,4 +1,4 @@
-from GUImainwindowd import Ui_MainWindow
+from GUImainwindow import Ui_MainWindow
 import map
 import sys
 from statistics import mean
@@ -42,11 +42,18 @@ class Application(QMainWindow):
         typetable = self.typetable()
         for i in typetable:
             self.ui.type_comboBox.addItem(i, typetable[i])
+        true = ['Все','Корректные', 'Некорректные']
+        for i in range(-1,2):
+            self.ui.true_comboBox.addItem(true[i+1], i)
         self.ui.tableWidget.viewport().installEventFilter(self) # для фильтрации кнопок
         self.ui.max_action.triggered.connect(self.MAX)
         self.ui.min_action.triggered.connect(self.MIN)
-        # self.ui.mean_action.triggered.connect(self.MEAN)
-        self.ui.mean_action.triggered.connect(self.DayGroup)
+        self.ui.mean_action.triggered.connect(self.MEAN)
+        self.ui.plot_action.triggered.connect(self.ShowPlot)
+        self.ui.day_action.triggered.connect(self.DayGroup)
+        self.ui.week_action.triggered.connect(self.WeekGroup)
+        self.ui.month_action.triggered.connect(self.MonthGroup)
+        
 
 
     # Фильтр на нажание кнопой ЛЕвая или правая
@@ -177,6 +184,7 @@ class Application(QMainWindow):
     def showtable(self):
         Query = QSqlQuery()
 
+        # Выбор по дате
         if self.ui.date_checkBox.isChecked() == True:
             datacheck = f"WHERE datetime(observations.date,  observations.time) >= '{self.ui.dateTimeEdit_min.dateTime().toPyDateTime()}' AND datetime(observations.date, observations.time) <= '{self.ui.dateTimeEdit_max.dateTime().toPyDateTime()}'"
             ch = 1
@@ -184,6 +192,7 @@ class Application(QMainWindow):
             datacheck = ''
             ch = 0
 
+        # Выбор по датчику
         if self.ui.sensor_checkBox.isChecked() == True and int(self.ui.sensors_comboBox.currentData()) > -1:
             if ch == 1:
                 w = 'AND'
@@ -195,6 +204,22 @@ class Application(QMainWindow):
             sensorcheck = ''
             ch = 0
 
+        # Выбор по корректности
+        if self.ui.true_checkBox.isChecked() == True and int(self.ui.true_comboBox.currentData()) > -1:
+            if ch == 1:
+                w = 'AND'
+            else:
+                w = 'WHERE'
+            if int(self.ui.true_comboBox.currentData()) == 0:
+                truecheck = f"{w} observations.mark == {int(self.ui.true_comboBox.currentData()+1)}"
+            else:
+                truecheck = f"{w} observations.mark == {int(self.ui.true_comboBox.currentData()-1)}"
+            ch = 1
+        else:
+            truecheck = ''
+            ch = 0    
+
+        # Выбор по типу данных
         if self.ui.type_checkBox.isChecked() == True and str(self.ui.type_comboBox.currentData()) != 'Все':   
             if ch == 1:
                 w = "AND"
@@ -240,6 +265,7 @@ class Application(QMainWindow):
             {typecheck}
             {datacheck}
             {sensorcheck}
+            {truecheck}
             """
         )
 
@@ -685,11 +711,23 @@ class Application(QMainWindow):
 
 
 
-    # Группировка по дню, для срочных даннных
     def DayGroup(self):
+        self.DateGroup('D')
+    
+    def WeekGroup(self):
+        self.DateGroup('W')
+
+    def MonthGroup(self):
+        self.DateGroup('M')
+
+
+    # Срочные данные (День, неденя, месяц)
+    def DateGroup(self, typegroup):
         try:
-            df = {"Дата": [], "Temperature Air, °C": [], "Temperature Ground, °C": []}
+            df = {"Дата": [], "Temperature Air, °C": []}
+            df_g = {"Дата": [], "Temperature Ground, °C": []}
             df = pd.DataFrame(df)
+            df_g = pd.DataFrame(df_g)
             rows = self.ui.tableWidget.rowCount()
             columns = self.ui.tableWidget.columnCount()
             headers = []
@@ -700,36 +738,57 @@ class Application(QMainWindow):
             time = headers.index('Время')
             col_air = headers.index("Temperature Air, °C")
             col_ground = headers.index("Temperature Ground, °C")
-            # Сделать 2 датафрейма
             for row in range(rows):
-                row = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
-                       float(self.ui.tableWidget.item(row , col_air).text()), float(self.ui.tableWidget.item(row , col_ground).text())]
-                df.loc[len(df.index)] = row
+                if self.ui.tableWidget.item(row , col_air).text() != '' and self.ui.tableWidget.item(row , 0).text() == '1':
+                    row_a = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
+                       float(self.ui.tableWidget.item(row , col_air).text())]
+                    df.loc[len(df.index)] = row_a
+
+            for row in range(rows):
+                if self.ui.tableWidget.item(row , col_ground).text() != '' and self.ui.tableWidget.item(row , 0).text() == '1':
+                    row_g = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
+                       float(self.ui.tableWidget.item(row , col_ground).text())]
+                    df_g.loc[len(df_g.index)] = row_g
             
-            # print(df)
-            res_min = df.groupby(pd.Grouper(key=df.columns[0], freq='D')).min().reset_index()
-            res = df.groupby(pd.Grouper(key=df.columns[0], freq='D')).mean().reset_index()
-            res_max = df.groupby(pd.Grouper(key=df.columns[0], freq='D')).max().reset_index()
+            res_min = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}'))[df.columns[1]].min().reset_index()
+            res = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}')).mean().reset_index()
+            res_max = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}'))[df.columns[1]].max().reset_index()
+
+            res_min_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].min().reset_index()
+            res_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].mean().reset_index()
+            res_max_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].max().reset_index()
+
             res['Дата'] = pd.to_datetime(res["Дата"]).dt.date
             res = res.round(2)
-            res_min = res.round(2)
-            res_max = res.round(2)
-            # print(res)
+            res_min = res_min.round(2)
+            res_max = res_max.round(2)
+
+            res_g = res_g.round(2)
+            res_min_g = res_min_g.round(2)
+            res_max_g = res_max_g.round(2)
+
+            # print(res_max)
             rows = (len(res.axes[0]))
             columns = (len(res.axes[1]))
-            row = 0
             self.ui.tableWidget.clear()
             self.ui.tableWidget.setRowCount(0)
             self.ui.tableWidget.setColumnCount(7)
-            self.ui.tableWidget.setHorizontalHeaderLabels(['Дата', 'Temperature Air, °C Минимум', 'Temperature Ground, °C Минимум', 'Temperature Air, °C Среднее', 'Temperature Ground, °C Среднее', 'Temperature Air, °C Максимум', 'Temperature Ground, °C Максимум'])
-            # Изменить цикл для 2 датафреймов
-            for j in range(3):
-                for row in range(rows):
-                    self.ui.tableWidget.setRowCount(row+1)
-                    for column in range(columns):
-                        self.ui.tableWidget.setItem(row, column, QTableWidgetItem(str(res_min[res_min.columns[column]].iloc[row])))
-                        if row%2 ==1:
-                            self.ui.tableWidget.item(row, column).setBackground(QtGui.QColor(202, 204, 206))
+            self.ui.tableWidget.setHorizontalHeaderLabels(['Дата', 'Минимальная Temperature Air, °C', 'Средняя Temperature Air, °C', 
+                                                           'Максимальная Temperature Air, °C', 'Минимальная Temperature Ground, °C', 
+                                                           'Средняя Temperature Ground, °C', 'Максимальная Temperature Ground, °C'])
+            # Отображение данных
+            for row in range(rows):
+                self.ui.tableWidget.setRowCount(row+1)
+                self.ui.tableWidget.setItem(row, 0, QTableWidgetItem(str((res[res.columns[0]].iloc[row]))))
+                self.ui.tableWidget.setItem(row, 1, QTableWidgetItem(str(res_min[res_min.columns[1]].iloc[row])))
+                self.ui.tableWidget.setItem(row, 2, QTableWidgetItem(str(res[res.columns[1]].iloc[row])))
+                self.ui.tableWidget.setItem(row, 3, QTableWidgetItem(str(res_max[res_max.columns[1]].iloc[row])))
+                self.ui.tableWidget.setItem(row, 4, QTableWidgetItem(str(res_min_g[res_min_g.columns[1]].iloc[row])))
+                self.ui.tableWidget.setItem(row, 5, QTableWidgetItem(str(res_g[res_g.columns[1]].iloc[row])))
+                self.ui.tableWidget.setItem(row, 6, QTableWidgetItem(str(res_max_g[res_max_g.columns[1]].iloc[row])))
+                if row%2 ==1:
+                    for i in range(0,7):
+                        self.ui.tableWidget.item(row, i).setBackground(QtGui.QColor(202, 204, 206))
         except:
             pass
 

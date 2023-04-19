@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1059</width>
-    <height>527</height>
+    <width>1300</width>
+    <height>691</height>
    </rect>
   </property>
   <property name="font">
@@ -229,6 +229,48 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="true_checkBox">
+        <property name="minimumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="true_comboBox">
+        <property name="minimumSize">
+         <size>
+          <width>200</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="Line" name="line_5">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -253,7 +295,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1059</width>
+     <width>1300</width>
      <height>21</height>
     </rect>
    </property>
@@ -284,8 +326,18 @@
      <addaction name="min_action"/>
      <addaction name="mean_action"/>
     </widget>
+    <widget class="QMenu" name="menu_5">
+     <property name="title">
+      <string>Срочные</string>
+     </property>
+     <addaction name="day_action"/>
+     <addaction name="week_action"/>
+     <addaction name="month_action"/>
+    </widget>
     <addaction name="add_data_to_DB_action"/>
     <addaction name="menu_4"/>
+    <addaction name="plot_action"/>
+    <addaction name="menu_5"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -335,6 +387,26 @@
   <action name="mean_action">
    <property name="text">
     <string>Среднее</string>
+   </property>
+  </action>
+  <action name="plot_action">
+   <property name="text">
+    <string>График</string>
+   </property>
+  </action>
+  <action name="day_action">
+   <property name="text">
+    <string>День</string>
+   </property>
+  </action>
+  <action name="week_action">
+   <property name="text">
+    <string>Неделя</string>
+   </property>
+  </action>
+  <action name="month_action">
+   <property name="text">
+    <string>Месяц</string>
    </property>
   </action>
  </widget>
