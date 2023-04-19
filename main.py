@@ -46,7 +46,7 @@ class Application(QMainWindow):
         true = ['Все','Корректные', 'Некорректные']
         for i in range(-1,2):
             self.ui.true_comboBox.addItem(true[i+1], i)
-        self.ui.tableWidget.viewport().installEventFilter(self) # для фильтрации кнопок
+        # self.ui.tableWidget.viewport().installEventFilter(self) # для фильтрации кнопок
         self.ui.max_action.triggered.connect(self.MAX)
         self.ui.min_action.triggered.connect(self.MIN)
         self.ui.mean_action.triggered.connect(self.MEAN)
@@ -59,13 +59,13 @@ class Application(QMainWindow):
 
 
     # Фильтр на нажание кнопой ЛЕвая или правая
-    def eventFilter(self, source, event):
-        if event.type() == QtCore.QEvent.MouseButtonPress:
-            if event.button() == QtCore.Qt.LeftButton:
-                return 0
-            elif event.button() == QtCore.Qt.RightButton:
-                pass
-        return super().eventFilter(source, event)
+    # def eventFilter(self, source, event):
+    #     if event.type() == QtCore.QEvent.MouseButtonPress:
+    #         if event.button() == QtCore.Qt.LeftButton:
+    #             return 0
+    #         elif event.button() == QtCore.Qt.RightButton:
+    #             pass
+    #     return super().eventFilter(source, event)
 
 
     
@@ -76,7 +76,7 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                self.df = self.df.loc[0:20]
+                # self.df = self.df.loc[0:5000]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
@@ -357,7 +357,6 @@ class Application(QMainWindow):
 
         try:
             while Query.next():
-                CheckBox.append(QtWidgets.QCheckBox())
                 rows = self.ui.tableWidget.rowCount()
                 self.ui.tableWidget.setRowCount(rows + 1)
                 i = 0
@@ -365,8 +364,10 @@ class Application(QMainWindow):
                     self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
                     if rows%2 ==1:
                         self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
-    
-                if Query.value(0) == 1:
+
+            for rows in range(self.ui.tableWidget.rowCount()):
+                CheckBox.append(QtWidgets.QCheckBox())
+                if int(self.ui.tableWidget.item(rows, 0).text()) == 1:
                     self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Верно")))
                     if rows%2 ==1:
                         self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
@@ -386,6 +387,7 @@ class Application(QMainWindow):
 
         except:
             QMessageBox.about(self, "Данные", "Произошла ошибка отображения")
+            return
     
         
     def MAX(self):
@@ -781,58 +783,128 @@ class Application(QMainWindow):
             sensor = headers.index('Датчик')
             date = headers.index('Дата')
             time = headers.index('Время')
-            col_air = headers.index("Temperature Air, °C")
-            col_ground = headers.index("Temperature Ground, °C")
-            for row in range(rows):
-                if self.ui.tableWidget.item(row , col_air).text() != '' and self.ui.tableWidget.item(row , 0).text() == '1':
-                    row_a = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
-                       float(self.ui.tableWidget.item(row , col_air).text())]
-                    df.loc[len(df.index)] = row_a
+            try:
+                col_air = headers.index("Temperature Air, °C")
+            except:
+                pass
+            try:
+                col_ground = headers.index("Temperature Ground, °C")
+            except:
+                pass
 
-            for row in range(rows):
-                if self.ui.tableWidget.item(row , col_ground).text() != '' and self.ui.tableWidget.item(row , 0).text() == '1':
-                    row_g = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
-                       float(self.ui.tableWidget.item(row , col_ground).text())]
-                    df_g.loc[len(df_g.index)] = row_g
+            try:
+                for row in range(rows):
+                    if self.ui.tableWidget.item(row , col_air).text() != '' and self.ui.tableWidget.item(row , 0).text() == '1':
+                        row_a = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
+                        float(self.ui.tableWidget.item(row , col_air).text())]
+                        df.loc[len(df.index)] = row_a
+                    else:
+                        pass
+            except:
+                pass
             
-            res_min = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}'))[df.columns[1]].min().reset_index()
-            res = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}')).mean().reset_index()
-            res_max = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}'))[df.columns[1]].max().reset_index()
+            try:
+                for row in range(rows):
+                    if self.ui.tableWidget.item(row , col_ground).text() != '' and self.ui.tableWidget.item(row , 0).text() == '1':
+                        row_g = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
+                        float(self.ui.tableWidget.item(row , col_ground).text())]
+                        df_g.loc[len(df_g.index)] = row_g
+                    else:
+                        pass
+            except:
+                pass
+            
+            try:
+                res_min = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}'))[df.columns[1]].min().reset_index()
+                res = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}')).mean().reset_index()
+                res_max = df.groupby(pd.Grouper(key=df.columns[0], freq=f'{typegroup}'))[df.columns[1]].max().reset_index()
 
-            res_min_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].min().reset_index()
-            res_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].mean().reset_index()
-            res_max_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].max().reset_index()
+                res['Дата'] = pd.to_datetime(res["Дата"]).dt.date
+                res = res.round(2)
+                res_min = res_min.round(2)
+                res_max = res_max.round(2)
+            except:
+                res = pd.DataFrame()
+                N = 4
+                pass
 
-            res['Дата'] = pd.to_datetime(res["Дата"]).dt.date
-            res = res.round(2)
-            res_min = res_min.round(2)
-            res_max = res_max.round(2)
+            try:
+                res_min_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].min().reset_index()
+                res_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].mean().reset_index()
+                res_max_g = df_g.groupby(pd.Grouper(key=df_g.columns[0], freq=f'{typegroup}'))[df_g.columns[1]].max().reset_index()
 
-            res_g = res_g.round(2)
-            res_min_g = res_min_g.round(2)
-            res_max_g = res_max_g.round(2)
+                res_g['Дата'] = pd.to_datetime(res_g["Дата"]).dt.date
+                res_g = res_g.round(2)
+                res_min_g = res_min_g.round(2)
+                res_max_g = res_max_g.round(2)
+            except:
+                res_g = pd.DataFrame()
+                N = 4
+                pass
+            
+            # res['Дата'] = pd.to_datetime(res["Дата"]).dt.date
+            # res = res.round(2)
+            # res_min = res_min.round(2)
+            # res_max = res_max.round(2)
+
+            # res_g = res_g.round(2)
+            # res_min_g = res_min_g.round(2)
+            # res_max_g = res_max_g.round(2)
 
             # print(res_max)
-            rows = (len(res.axes[0]))
-            columns = (len(res.axes[1]))
+
             self.ui.tableWidget.clear()
             self.ui.tableWidget.setRowCount(0)
-            self.ui.tableWidget.setColumnCount(7)
-            self.ui.tableWidget.setHorizontalHeaderLabels(['Дата', 'Минимальная Temperature Air, °C', 'Средняя Temperature Air, °C', 
-                                                           'Максимальная Temperature Air, °C', 'Минимальная Temperature Ground, °C', 
+
+
+            if res.empty != True and res_g.empty != True:
+                self.ui.tableWidget.setColumnCount(7)
+                N = 7
+                rows = (len(res.axes[0]))
+                columns = (len(res.axes[1]))
+                self.ui.tableWidget.setHorizontalHeaderLabels(['Дата', 'Минимальная Temperature Air, °C', 'Средняя Temperature Air, °C', 
+                                                            'Максимальная Temperature Air, °C' , 'Минимальная Temperature Ground, °C', 
                                                            'Средняя Temperature Ground, °C', 'Максимальная Temperature Ground, °C'])
+            
+            elif res_g.empty == True and res.empty != True:
+                self.ui.tableWidget.setColumnCount(N)
+                rows = (len(res.axes[0]))
+                columns = (len(res.axes[1]))
+                self.ui.tableWidget.setHorizontalHeaderLabels(['Дата', 'Минимальная Temperature Air, °C', 'Средняя Temperature Air, °C', 
+                                                            'Максимальная Temperature Air, °C'])
+            elif res.empty == True and res_g.empty != True:
+                self.ui.tableWidget.setColumnCount(N)
+                rows = (len(res_g.axes[0]))
+                columns = (len(res_g.axes[1]))
+                self.ui.tableWidget.setHorizontalHeaderLabels(['Дата', 'Минимальная Temperature Ground, °C', 
+                                                           'Средняя Temperature Ground, °C', 'Максимальная Temperature Ground, °C'])
+            else: 
+                return
+
+
             # Отображение данных
             for row in range(rows):
                 self.ui.tableWidget.setRowCount(row+1)
-                self.ui.tableWidget.setItem(row, 0, QTableWidgetItem(str((res[res.columns[0]].iloc[row]))))
-                self.ui.tableWidget.setItem(row, 1, QTableWidgetItem(str(res_min[res_min.columns[1]].iloc[row])))
-                self.ui.tableWidget.setItem(row, 2, QTableWidgetItem(str(res[res.columns[1]].iloc[row])))
-                self.ui.tableWidget.setItem(row, 3, QTableWidgetItem(str(res_max[res_max.columns[1]].iloc[row])))
-                self.ui.tableWidget.setItem(row, 4, QTableWidgetItem(str(res_min_g[res_min_g.columns[1]].iloc[row])))
-                self.ui.tableWidget.setItem(row, 5, QTableWidgetItem(str(res_g[res_g.columns[1]].iloc[row])))
-                self.ui.tableWidget.setItem(row, 6, QTableWidgetItem(str(res_max_g[res_max_g.columns[1]].iloc[row])))
+                if res.empty != True and res_g.empty != True:
+                    self.ui.tableWidget.setItem(row, 0, QTableWidgetItem(str((res[res.columns[0]].iloc[row]))))
+                    self.ui.tableWidget.setItem(row, 1, QTableWidgetItem(str(res_min[res_min.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 2, QTableWidgetItem(str(res[res.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 3, QTableWidgetItem(str(res_max[res_max.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 4, QTableWidgetItem(str(res_min_g[res_min_g.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 5, QTableWidgetItem(str(res_g[res_g.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 6, QTableWidgetItem(str(res_max_g[res_max_g.columns[1]].iloc[row])))
+                elif res_g.empty == True and res.empty != True:
+                    self.ui.tableWidget.setItem(row, 0, QTableWidgetItem(str((res[res.columns[0]].iloc[row]))))
+                    self.ui.tableWidget.setItem(row, 1, QTableWidgetItem(str(res_min[res_min.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 2, QTableWidgetItem(str(res[res.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 3, QTableWidgetItem(str(res_max[res_max.columns[1]].iloc[row])))
+                elif res.empty == True and res_g.empty != True:
+                    self.ui.tableWidget.setItem(row, 0, QTableWidgetItem(str((res_g[res_g.columns[0]].iloc[row]))))
+                    self.ui.tableWidget.setItem(row, 1, QTableWidgetItem(str(res_min_g[res_min_g.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 2, QTableWidgetItem(str(res_g[res_g.columns[1]].iloc[row])))
+                    self.ui.tableWidget.setItem(row, 3, QTableWidgetItem(str(res_max_g[res_max_g.columns[1]].iloc[row])))
                 if row%2 ==1:
-                    for i in range(0,7):
+                    for i in range(N):
                         self.ui.tableWidget.item(row, i).setBackground(QtGui.QColor(202, 204, 206))
         except:
             pass
