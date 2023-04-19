@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import (
 import pandas as pd
 import matplotlib.pyplot as plt   
 from datetime import datetime, date
+from xlsxwriter.workbook import Workbook 
 
 import addsensor
 import adddatatodb
@@ -53,6 +54,7 @@ class Application(QMainWindow):
         self.ui.day_action.triggered.connect(self.DayGroup)
         self.ui.week_action.triggered.connect(self.WeekGroup)
         self.ui.month_action.triggered.connect(self.MonthGroup)
+        self.ui.save_action.triggered.connect(self.SaveFile)
         
 
 
@@ -85,6 +87,48 @@ class Application(QMainWindow):
             self.df = self.df.drop(columns=self.df.columns[2])
             self.showlastfile(self.df)
 
+
+    # Сохранение данных из таблицы в файл
+    def SaveFile(self):
+        fileName, ok = QFileDialog.getSaveFileName(
+            self,
+            "Сохранить файл",
+            ".",
+            "All Files(*.xlsx)"
+        )
+        if not fileName:
+            return 
+        
+        try:
+            list_tabel = []
+            rows = self.ui.tableWidget.rowCount()
+            columns = self.ui.tableWidget.columnCount()
+            headers = []
+            for column in range(2, columns):
+                headers.append("{}".format(self.ui.tableWidget.horizontalHeaderItem(column).text() or ""))
+            list_tabel.append(headers)
+
+
+            for row in range(rows):
+                row_tabel = []
+                for column in range(2, columns):
+                    row_tabel.append("{}".format(self.ui.tableWidget.item(row, column).text() or ""))
+                list_tabel.append(row_tabel)
+
+            workbook = Workbook(fileName)
+            worksheet = workbook.add_worksheet() 
+
+            for r, row in enumerate(list_tabel):
+                for c, col in enumerate(row):
+                    worksheet.write(r, c, col)        
+            workbook.close()  
+            msg = QMessageBox.information(
+                self, 
+                "Успех!", 
+                f"Данные сохранены в файле: \n{fileName}"
+            ) 
+        except:
+            return
 
     # Получение всех датчиков
     def sensors(self):
@@ -336,8 +380,9 @@ class Application(QMainWindow):
                     self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
                     CheckBox[-1].stateChanged.connect(changeS)
                 
-                # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-                # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+                
+            # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
 
         except:
             QMessageBox.about(self, "Данные", "Произошла ошибка отображения")
