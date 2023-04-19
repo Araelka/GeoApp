@@ -62,7 +62,7 @@ class Application(QMainWindow):
             if event.button() == QtCore.Qt.LeftButton:
                 return 0
             elif event.button() == QtCore.Qt.RightButton:
-                print("Правая")
+                pass
         return super().eventFilter(source, event)
 
 
