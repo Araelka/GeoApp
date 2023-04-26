@@ -65,143 +65,154 @@ Query.exec(
         uid_sensor INTEGER,
         date TEXT NOT NULL,
         time TEXT NOT NULL,
+        temperature_air FLOAT NOT NULL,
+        RH FLOAT NOT NULL,
+        water_content FLOAT NOT NULL,
+        PAR FLOAT NOT NULL,
+        rain FLOAT NOT NULL,
+        pressure FLOAT NOT NULL,
+        gust_speed FLOAT NOT NULL,
+        wind_speed FLOAT NOT NULL,
+        solar_radiation FLOAT NOT NULL,
+        wind_direction FLOAT NOT NULL,
+        temperature_ground FLOAT NOT NULL,
         mark BOOLEAN NOT NULL DEFAULT 1,
         FOREIGN KEY (uid_sensor) REFERENCES sensors (uid_sensor)
     )
     """
 )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS temperature_air (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS temperature_air (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS RH (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS RH (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS water_content (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS water_content (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS PAR (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS PAR (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS rain (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS rain (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS current (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS current (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS pressure (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS pressure (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS gust_speed (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS gust_speed (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS wind_speed (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS wind_speed (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS solar_radiation (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS solar_radiation (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS wind_direction (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS wind_direction (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
-Query.exec(
-    """
-    CREATE TABLE IF NOT EXISTS temperature_ground (
-        number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
-        uid_observations INTEGER,
-        value FLOAT NOT NULL,
-        FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
-    )
-    """
-)
+# Query.exec(
+#     """
+#     CREATE TABLE IF NOT EXISTS temperature_ground (
+#         number INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE NOT NULL,
+#         uid_observations INTEGER,
+#         value FLOAT NOT NULL,
+#         FOREIGN KEY (uid_observations) REFERENCES observations (uid_observations)
+#     )
+#     """
+# )
 
 
 # Добавление записи в таблицу
@@ -209,7 +220,7 @@ Query.exec(
 # Query.exec(
 #     """
 #     INSERT INTO type_sensors (type)
-#     VALUES ('Общий') 
+#     VALUES ('Общий'), ('Наземный'), ('Воздушный');
 #     """
 # )
 

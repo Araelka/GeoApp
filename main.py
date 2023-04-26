@@ -76,7 +76,7 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                # self.df = self.df.loc[0:5000]
+                self.df = self.df.loc[0:10]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
@@ -450,7 +450,7 @@ class Application(QMainWindow):
             sens[Query.value(0)] =str(Query.value(1)) + ' | ' + str(Query.value(2)) + ' | ' + str(Query.value(5))
 
         headers = {}
-        headers[100] = ' '
+        headers[-1] = ' '
         try:
             heads = list(self.df.columns)
             k = 0
@@ -468,293 +468,259 @@ class Application(QMainWindow):
 
         checkwindow = checkdata.DataCheck(self)
         checkwindow.exec_()
-
-        try:
-            temp_check = checkwindow.temp
-            RH_check = checkwindow.RH
-        except:
-            pass
         
-        try:
-            sensor = windowdate.sensor
-            date = windowdate.date
-            time = windowdate.time
-        except:
-            pass
-        try:
-            water_content = windowdate.water_content
-        except:
-            pass
-        try:
-            current = windowdate.current
-        except:
-            pass
-        try:
-            PAR = windowdate.PAR
-        except:
-            pass
-        try:
-            temp_air = windowdate.temp_air
-            airtype = windowdate.airtype
-        except:
-            pass
-        try:
-            RH = windowdate.RH
-        except:
-            pass
-        try:
-            wind_speed = windowdate.wind_speed
-        except:
-            pass
-        try:
-            gust_speed = windowdate.gust_speed
-        except:
-            pass
-        try:
-            wind_direction = windowdate.wind_direction
-        except:
-            pass
-        try:
-            temp_ground = windowdate.temp_ground
-            groundtype = windowdate.groundtype
-        except:
-            pass
-        try:
-            pressure = windowdate.pressure
-        except:
-            pass
-        try:
-            rain = windowdate.rain
-        except:
-            pass
-        try:
-            solar_radiation = windowdate.solar_radiation
-        except:
-            pass
+        data_dict = windowdate.data_dict
+        type_dict = windowdate.type_dict
+        data_new = {}
+        for i in data_dict:
+            if data_dict[i] != -1:
+                data_new[i] = data_dict[i]
+            else:
+                data_new[i] = ''
+
+        tabel_name = ', '.join(data_dict)
+        
+        
 
         try:
             for i in range (len(self.df.index)):
-                # Загрузка наблюдений
-                Query.exec(
-                    f"""
-                    INSERT INTO observations (uid_sensor, date, time)
-                    VALUES ({sensor}, '{str(self.df.iat[i,date])}', '{str(self.df.iat[i,time])}') 
-                    """
-                )
-
-                Query.exec(
-                    """
-                    SELECT uid_observations FROM observations WHERE uid_observations = (SELECT MAX(uid_observations)  FROM observations)
-                    """
-                )
-
-                while Query.next():
-                    id = Query.value(0)
-                
-                # Загрузка temperature_air
-                try:
-                    if airtype == 1:
-                        temp = float(self.df.iat[i,temp_air])
-                        if temp < temp_check[0] or temp > temp_check[1]:
-                            Query.exec(
-                            f"""
-                            UPDATE observations
-                            SET mark = 0
-                            WHERE uid_observations = {id}
-                            """
-                        )
-
-
-
-                        Query.exec(
-                            f"""
-                            INSERT INTO temperature_air (uid_observations, value)
-                            VALUES ({int(id)}, {round(temp, 1)}) 
-                            """
-                        )
+                q = ''
+                for column in data_new:
+                    # print(self.df.iat[i,data_new[column]])
+                    if data_new[column] != '':
+                        q = q + f"{float(self.df.iat[i,data_new[column]])}"
                     else:
-                        temp = float((5/9)*(float(self.df.iat[i,temp_air])-32))
-                        if temp < temp_check[0] or temp > temp_check[1]:
-                            Query.exec(
-                            f"""
-                            UPDATE observations
-                            SET mark = 0
-                            WHERE uid_observations = {id}
-                            """
-                        )
+                        q = q + " "
+                print(q)
+                        
 
-
-                        Query.exec(
-                            f"""
-                            INSERT INTO temperature_air (uid_observations, value)
-                            VALUES ({int(id)}, {round(temp, 1)}) 
-                            """
-                        )
-                except:
-                    pass
-                
-                # Загрузка RH
-                try:
-                    if float(self.df.iat[i,RH]) < RH_check[0] or float(self.df.iat[i,RH]) > RH_check[1]:
-                        Query.exec(
-                        f"""
-                        UPDATE observations
-                        SET mark = 0
-                        WHERE uid_observations = {id}
-                        """
-                    )
-
-
-                    Query.exec(
-                        f"""
-                        INSERT INTO RH (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,RH])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка water_content
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO water_content (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,water_content])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка PAR
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO PAR (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,PAR])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка rain
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO rain (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,rain])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка current
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO current (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,current])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка pressure
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO pressure (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,pressure])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка gust_speed
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO gust_speed (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,gust_speed])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка wind_speed
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO wind_speed (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,wind_speed])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка solar_radiation
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO solar_radiation (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,solar_radiation])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка wind_direction
-                try:
-                    Query.exec(
-                        f"""
-                        INSERT INTO wind_direction (uid_observations, value)
-                        VALUES ({int(id)}, {float(self.df.iat[i,wind_direction])}) 
-                        """
-                    )
-                except:
-                    pass
-
-                # Загрузка temperature_ground
-                try:
-                    if groundtype == 1:
-                        temp = float(self.df.iat[i,temp_ground])
-                        if temp < temp_check[0] or temp > temp_check[1]:
-                            Query.exec(
-                            f"""
-                            UPDATE observations
-                            SET mark = 0
-                            WHERE uid_observations = {id}
-                            """
-                            )
-
-
-                        Query.exec(
-                            f"""
-                            INSERT INTO temperature_ground (uid_observations, value)
-                            VALUES ({int(id)}, {round(temp, 3)}) 
-                            """
-                        )
-                    else:
-                        temp = float((5/9)*(float(self.df.iat[i,temp_ground])-32))
-                        if temp < temp_check[0] or temp > temp_check[1]:
-                            Query.exec(
-                            f"""
-                            UPDATE observations
-                            SET mark = 0
-                            WHERE uid_observations = {id}
-                            """
-                            )
-
-                        Query.exec(
-                            f"""
-                            INSERT INTO temperature_ground (uid_observations, value)
-                            VALUES ({int(id)}, {round(temp, 3)}) 
-                            """
-                        )
-                except:
-                    pass
-            QMessageBox.about(self, "Загрузка данных", "Данные успешно загружены")
+                # # Загрузка наблюдений
+                # Query.exec(
+                #     f"""
+                #     INSERT INTO observations ({tabel_name})
+                #     VALUES ({data_new['uid_sensor']}, '{str(self.df.iat[i,data_new['date']])}', '{str(self.df.iat[i,data_new['time']])}',
+                #     {float(self.df.iat[i,data_new['water_content']])},  {float(self.df.iat[i,data_new['PAR']])},{round(float(self.df.iat[i,data_new['temperature_air']]), 1)},
+                #     {float(self.df.iat[i,data_new['RH']])}, {float(self.df.iat[i,data_new['wind_speed']])}, {float(self.df.iat[i,data_new['gust_speed']])},
+                #     {float(self.df.iat[i,data_new['wind_direction']])}, {round(float(self.df.iat[i,data_new['temperature_ground']]), 3)}, {float(self.df.iat[i,data_new['pressure']])},
+                #     {float(self.df.iat[i,data_new['rain']])}, {float(self.df.iat[i,data_new['solar_radiation']])}) 
+                #     """
+                # )
         except:
-            QMessageBox.about(self, "Загрузка данных", "Не удалось загрузить данные\nПроверьте сотношение столбцов")
+            pass
+
+        #         Query.exec(
+        #             """
+        #             SELECT uid_observations FROM observations WHERE uid_observations = (SELECT MAX(uid_observations)  FROM observations)
+        #             """
+        #         )
+
+        #         while Query.next():
+        #             id = Query.value(0)
+                
+        #         # Загрузка temperature_air
+        #         try:
+        #             if airtype == 1:
+        #                 temp = float(self.df.iat[i,temp_air])
+        #                 if temp < temp_check[0] or temp > temp_check[1]:
+        #                     Query.exec(
+        #                     f"""
+        #                     UPDATE observations
+        #                     SET mark = 0
+        #                     WHERE uid_observations = {id}
+        #                     """
+        #                 )
+
+
+
+        #                 Query.exec(
+        #                     f"""
+        #                     INSERT INTO temperature_air (uid_observations, value)
+        #                     VALUES ({int(id)}, {round(temp, 1)}) 
+        #                     """
+        #                 )
+        #             else:
+        #                 temp = float((5/9)*(float(self.df.iat[i,temp_air])-32))
+        #                 if temp < temp_check[0] or temp > temp_check[1]:
+        #                     Query.exec(
+        #                     f"""
+        #                     UPDATE observations
+        #                     SET mark = 0
+        #                     WHERE uid_observations = {id}
+        #                     """
+        #                 )
+
+
+        #                 Query.exec(
+        #                     f"""
+        #                     INSERT INTO temperature_air (uid_observations, value)
+        #                     VALUES ({int(id)}, {round(temp, 1)}) 
+        #                     """
+        #                 )
+        #         except:
+        #             pass
+                
+        #         # Загрузка RH
+        #         try:
+        #             if float(self.df.iat[i,RH]) < RH_check[0] or float(self.df.iat[i,RH]) > RH_check[1]:
+        #                 Query.exec(
+        #                 f"""
+        #                 UPDATE observations
+        #                 SET mark = 0
+        #                 WHERE uid_observations = {id}
+        #                 """
+        #             )
+
+
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO RH (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,RH])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка water_content
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO water_content (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,water_content])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка PAR
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO PAR (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,PAR])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка rain
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO rain (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,rain])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка current
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO current (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,current])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка pressure
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO pressure (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,pressure])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка gust_speed
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO gust_speed (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,gust_speed])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка wind_speed
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO wind_speed (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,wind_speed])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка solar_radiation
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO solar_radiation (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,solar_radiation])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка wind_direction
+        #         try:
+        #             Query.exec(
+        #                 f"""
+        #                 INSERT INTO wind_direction (uid_observations, value)
+        #                 VALUES ({int(id)}, {float(self.df.iat[i,wind_direction])}) 
+        #                 """
+        #             )
+        #         except:
+        #             pass
+
+        #         # Загрузка temperature_ground
+        #         try:
+        #             if groundtype == 1:
+        #                 temp = float(self.df.iat[i,temp_ground])
+        #                 if temp < temp_check[0] or temp > temp_check[1]:
+        #                     Query.exec(
+        #                     f"""
+        #                     UPDATE observations
+        #                     SET mark = 0
+        #                     WHERE uid_observations = {id}
+        #                     """
+        #                     )
+
+
+        #                 Query.exec(
+        #                     f"""
+        #                     INSERT INTO temperature_ground (uid_observations, value)
+        #                     VALUES ({int(id)}, {round(temp, 3)}) 
+        #                     """
+        #                 )
+        #             else:
+        #                 temp = float((5/9)*(float(self.df.iat[i,temp_ground])-32))
+        #                 if temp < temp_check[0] or temp > temp_check[1]:
+        #                     Query.exec(
+        #                     f"""
+        #                     UPDATE observations
+        #                     SET mark = 0
+        #                     WHERE uid_observations = {id}
+        #                     """
+        #                     )
+
+        #                 Query.exec(
+        #                     f"""
+        #                     INSERT INTO temperature_ground (uid_observations, value)
+        #                     VALUES ({int(id)}, {round(temp, 3)}) 
+        #                     """
+        #                 )
+        #         except:
+        #             pass
+        #     QMessageBox.about(self, "Загрузка данных", "Данные успешно загружены")
+        # except:
+        #     QMessageBox.about(self, "Загрузка данных", "Не удалось загрузить данные\nПроверьте сотношение столбцов")
 
 
 
