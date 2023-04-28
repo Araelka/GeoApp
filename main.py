@@ -150,11 +150,11 @@ class Application(QMainWindow):
     
     # Типы таблицы
     def typetable(self):
-        typename = ['Water Content, m³/m³', 'Current, mA', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
+        typename = ['Water Content, m³/m³', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
                     'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
                     'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²']
         
-        tablename = ['water_content', 'current', 'PAR', 'temperature_air', 'RH', 
+        tablename = ['water_content', 'PAR', 'temperature_air', 'RH', 
                      'wind_speed', 'gust_speed', 'wind_direction', 'temperature_ground',
                      'pressure', 'rain', 'solar_radiation']
         
@@ -274,9 +274,9 @@ class Application(QMainWindow):
             NH = 9
         else:
             datetype = """
-            water_content.value, current.value, PAR.value, temperature_air.value,
-            RH.value, wind_speed.value, gust_speed.value, wind_direction.value,
-            temperature_ground.value, pressure.value, rain.value, solar_radiation.value,
+            observations.water_content, observations.PAR, observations.temperature_air,
+            observations.RH, observations.wind_speed, observations.gust_speed, observations.wind_direction,
+            observations.temperature_ground, observations.pressure, observations.rain, observations.solar_radiation,
             """
 
             typecheck = """
@@ -293,7 +293,7 @@ class Application(QMainWindow):
             LEFT JOIN rain ON rain.uid_observations = observations.uid_observations
             LEFT JOIN solar_radiation ON solar_radiation.uid_observations = observations.uid_observations"""
         
-            NH = 20
+            NH = 19
 
 
         Query.exec(
@@ -306,7 +306,6 @@ class Application(QMainWindow):
             FROM observations
             LEFT JOIN sensors ON sensors.uid_sensor = observations.uid_sensor
             LEFT JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type
-            {typecheck}
             {datacheck}
             {sensorcheck}
             {truecheck}
@@ -319,9 +318,9 @@ class Application(QMainWindow):
         self.ui.tableWidget.clear()
         self.ui.tableWidget.setRowCount(0)
         self.ui.tableWidget.setColumnCount(NH)
-        if NH == 20:
+        if NH == 19:
             self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
-                                                        'Water Content, m³/m³', 'Current, mA', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
+                                                        'Water Content, m³/m³', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
                                                         'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
                                                         'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²', 'Корректность'])
         else:
@@ -382,8 +381,8 @@ class Application(QMainWindow):
                     CheckBox[-1].stateChanged.connect(changeS)
                 
                 
-            # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-            # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+            self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
 
         except:
             QMessageBox.about(self, "Данные", "Произошла ошибка отображения")
@@ -469,42 +468,90 @@ class Application(QMainWindow):
         checkwindow = checkdata.DataCheck(self)
         checkwindow.exec_()
         
-        data_dict = windowdate.data_dict
-        type_dict = windowdate.type_dict
-        data_new = {}
-        for i in data_dict:
-            if data_dict[i] != -1:
-                data_new[i] = data_dict[i]
-            else:
-                data_new[i] = ''
+        data_dict_W = windowdate.data_dict
+        type_dict_W = windowdate.type_dict
+        data_dict = {}
+        value_dict = {}
+        for i in data_dict_W:
+            if data_dict_W[i] != -1 and i in ['uid_sensor', 'date', 'time']:
+                data_dict[i] = data_dict_W[i]
+            elif data_dict_W[i] != -1 and i not in ['uid_sensor', 'date', 'time']:
+                value_dict[i] = data_dict_W[i]
 
-        tabel_name = ', '.join(data_dict)
+        tabel_name_data = ', '.join(data_dict)
+        tabel_name_value = ', '.join(value_dict)
+
+        # j = 0
+        # tabel_value = []
+        # for k in data_new:
+        #     if j > 2:
+        #         tabel_value.append(f"float(self.df.iat[i,data_new['{k}']")
+        #         # print(f'float(self.df.iat[i,data_new["{k}"]')
+        #     j +=1
+        
+        # value = []
+        # for i in tabel_value:
+        #     value.append('{' + i + '}')
+        # q = ', '.join(value)
+        # print(q)
         
         
 
         try:
             for i in range (len(self.df.index)):
-                q = ''
-                for column in data_new:
-                    # print(self.df.iat[i,data_new[column]])
-                    if data_new[column] != '':
-                        q = q + f"{float(self.df.iat[i,data_new[column]])}"
-                    else:
-                        q = q + " "
-                print(q)
-                        
+                value = []
+                for name in value_dict:
+                    value.append(float(self.df.iat[i,value_dict[f'{name}']]))
+                
+                    
 
-                # # Загрузка наблюдений
+                # Загрузка наблюдений
+                Query.exec(
+                    f"""
+                    INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                    VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                    )
+                    """
+                )
+
+                print(Query.lastQuery())
+
+
+                # Вариант рабочий, но долгий (использовать в крайнем случае)
                 # Query.exec(
-                #     f"""
-                #     INSERT INTO observations ({tabel_name})
-                #     VALUES ({data_new['uid_sensor']}, '{str(self.df.iat[i,data_new['date']])}', '{str(self.df.iat[i,data_new['time']])}',
-                #     {float(self.df.iat[i,data_new['water_content']])},  {float(self.df.iat[i,data_new['PAR']])},{round(float(self.df.iat[i,data_new['temperature_air']]), 1)},
-                #     {float(self.df.iat[i,data_new['RH']])}, {float(self.df.iat[i,data_new['wind_speed']])}, {float(self.df.iat[i,data_new['gust_speed']])},
-                #     {float(self.df.iat[i,data_new['wind_direction']])}, {round(float(self.df.iat[i,data_new['temperature_ground']]), 3)}, {float(self.df.iat[i,data_new['pressure']])},
-                #     {float(self.df.iat[i,data_new['rain']])}, {float(self.df.iat[i,data_new['solar_radiation']])}) 
+                #     """
+                #     SELECT uid_observations FROM observations WHERE uid_observations = (SELECT MAX(uid_observations)  FROM observations)
                 #     """
                 # )
+
+                # while Query.next():
+                #     id = Query.value(0)
+                
+                # for name in value_dict:
+                #     Query.exec(
+                #         f"""
+                #         UPDATE observations
+                #         SET {name} = {float(self.df.iat[i,value_dict[f'{name}']])}
+                #         WHERE uid_observations = {id}
+                #         """
+                #     )
+
+
+
+
+
+
+
+        # #         # Query.exec(
+        # #         #     f"""
+        # #         #     INSERT INTO observations ({tabel_name})
+        # #         #     VALUES ({data_new['uid_sensor']}, '{str(self.df.iat[i,data_new['date']])}', '{str(self.df.iat[i,data_new['time']])}',
+        # #         #     {float(self.df.iat[i,data_new['water_content']])},  {float(self.df.iat[i,data_new['PAR']])},{round(float(self.df.iat[i,data_new['temperature_air']]), 1)},
+        # #         #     {float(self.df.iat[i,data_new['RH']])}, {float(self.df.iat[i,data_new['wind_speed']])}, {float(self.df.iat[i,data_new['gust_speed']])},
+        # #         #     {float(self.df.iat[i,data_new['wind_direction']])}, {round(float(self.df.iat[i,data_new['temperature_ground']]), 3)}, {float(self.df.iat[i,data_new['pressure']])},
+        # #         #     {float(self.df.iat[i,data_new['rain']])}, {float(self.df.iat[i,data_new['solar_radiation']])}) 
+        # #         #     """
+        # #         # )
         except:
             pass
 
