@@ -76,7 +76,7 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                self.df = self.df.loc[0:5000]
+                self.df = self.df.loc[0:1000]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
