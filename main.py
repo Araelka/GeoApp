@@ -63,7 +63,6 @@ class Application(QMainWindow):
     # Устойчивый переход температуры через заданный рубеж
     # Смотреть лучше по среднесуточной температуре
     def testFunc(self):
-        ls = {}
         rows = self.ui.tableWidget.rowCount()
         max = 0
         min = 0
