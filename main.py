@@ -221,8 +221,8 @@ class Application(QMainWindow):
             plt.legend()
             #plt.get_current_fig_manager().window.showMaximized() - развернуть график на весь экран по умолчанию
             plt.show()
-        except Exception as e: 
-            print(e)
+        except:
+            pass
 
     # Отображение всех данных с возможностью выборки
     def showtable(self):
@@ -269,8 +269,8 @@ class Application(QMainWindow):
                 w = "AND"
             else:
                 w = "WHERE"
-            datetype = f"{str(self.ui.type_comboBox.currentData())}.value,"
-            typecheck = f"JOIN {str(self.ui.type_comboBox.currentData())} ON {str(self.ui.type_comboBox.currentData())}.uid_observations = observations.uid_observations"
+            datetype = f"observations.{str(self.ui.type_comboBox.currentData())},"
+            # typecheck = f"JOIN {str(self.ui.type_comboBox.currentData())} ON {str(self.ui.type_comboBox.currentData())}.uid_observations = observations.uid_observations"
             NH = 9
         else:
             datetype = """
@@ -279,19 +279,19 @@ class Application(QMainWindow):
             observations.temperature_ground, observations.pressure, observations.rain, observations.solar_radiation,
             """
 
-            typecheck = """
-            LEFT JOIN water_content ON water_content.uid_observations = observations.uid_observations
-            LEFT JOIN current ON current.uid_observations = observations.uid_observations
-            LEFT JOIN PAR ON PAR.uid_observations = observations.uid_observations
-            LEFT JOIN temperature_air ON temperature_air.uid_observations = observations.uid_observations
-            LEFT JOIN RH ON RH.uid_observations = observations.uid_observations
-            LEFT JOIN wind_speed ON wind_speed.uid_observations = observations.uid_observations
-            LEFT JOIN gust_speed ON gust_speed.uid_observations = observations.uid_observations
-            LEFT JOIN wind_direction ON wind_direction.uid_observations = observations.uid_observations
-            LEFT JOIN temperature_ground ON temperature_ground.uid_observations = observations.uid_observations
-            LEFT JOIN pressure ON pressure.uid_observations = observations.uid_observations
-            LEFT JOIN rain ON rain.uid_observations = observations.uid_observations
-            LEFT JOIN solar_radiation ON solar_radiation.uid_observations = observations.uid_observations"""
+            # typecheck = """
+            # LEFT JOIN water_content ON water_content.uid_observations = observations.uid_observations
+            # LEFT JOIN current ON current.uid_observations = observations.uid_observations
+            # LEFT JOIN PAR ON PAR.uid_observations = observations.uid_observations
+            # LEFT JOIN temperature_air ON temperature_air.uid_observations = observations.uid_observations
+            # LEFT JOIN RH ON RH.uid_observations = observations.uid_observations
+            # LEFT JOIN wind_speed ON wind_speed.uid_observations = observations.uid_observations
+            # LEFT JOIN gust_speed ON gust_speed.uid_observations = observations.uid_observations
+            # LEFT JOIN wind_direction ON wind_direction.uid_observations = observations.uid_observations
+            # LEFT JOIN temperature_ground ON temperature_ground.uid_observations = observations.uid_observations
+            # LEFT JOIN pressure ON pressure.uid_observations = observations.uid_observations
+            # LEFT JOIN rain ON rain.uid_observations = observations.uid_observations
+            # LEFT JOIN solar_radiation ON solar_radiation.uid_observations = observations.uid_observations"""
         
             NH = 19
 
@@ -484,22 +484,8 @@ class Application(QMainWindow):
         tabel_name_data = ', '.join(data_dict)
         tabel_name_value = ', '.join(value_dict)
 
-        # j = 0
-        # tabel_value = []
-        # for k in value_dict:
-        #     tabel_value.append(f"float(self.df.iat[i,value_dict['{k}']")
-        #     # print(f'float(self.df.iat[i,data_new["{k}"]')
-        # print(tabel_value)
-        
-        # value = []
-        # for i in tabel_value:
-        #     value.append('{' + i + '}')
-        # q = ', '.join(value)
-        # print(q)
 
-        
-        
-        
+                
 
         try:
             for i in range (len(self.df.index)):
@@ -625,8 +611,11 @@ class Application(QMainWindow):
                     
                 self.DBcheck(temp_check, RH_check)
 
+            QMessageBox.about(self, "Загрузка данных", "Данные успешно загружены")
+
         except:
-            pass
+            QMessageBox.about(self, "Загрузка данных", "Не удалось загрузить данные\nПроверьте сотношение столбцов")
+            
 
     #  Проверка ограничений входных данных из файла  
     def DBcheck(self, temp_check, RH_check):
