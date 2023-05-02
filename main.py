@@ -50,13 +50,34 @@ class Application(QMainWindow):
         self.ui.max_action.triggered.connect(self.MAX)
         self.ui.min_action.triggered.connect(self.MIN)
         self.ui.mean_action.triggered.connect(self.MEAN)
-        self.ui.plot_action.triggered.connect(self.ShowPlot)
+        # self.ui.plot_action.triggered.connect(self.ShowPlot)
+        self.ui.plot_action.triggered.connect(self.testFunc)
         self.ui.day_action.triggered.connect(self.DayGroup)
         self.ui.week_action.triggered.connect(self.WeekGroup)
         self.ui.month_action.triggered.connect(self.MonthGroup)
         self.ui.save_action.triggered.connect(self.SaveFile)
         
 
+
+    # Возможно оставить, но требуется доработка
+    # Устойчивый переход температуры через заданный рубеж
+    # Смотреть лучше по среднесуточной температуре
+    def testFunc(self):
+        ls = {}
+        rows = self.ui.tableWidget.rowCount()
+        max = 0
+        min = 0
+        for row in range(rows):
+            # print(float(self.ui.tableWidget.item(row, 9).text()))
+            if float(self.ui.tableWidget.item(row, 9).text()) < 0:
+                min += float(self.ui.tableWidget.item(row, 9).text())
+            else:
+                max += float(self.ui.tableWidget.item(row, 9).text())
+            if abs(max) < abs(min):
+                # QMessageBox.about(self, "Переход температуры", f'Устойчивый переход температуры через 0 произошёл: {self.ui.tableWidget.item(row, 5).text()}')
+                print(self.ui.tableWidget.item(row, 5).text())
+                break
+        
 
     # Фильтр на нажание кнопой ЛЕвая или правая
     # def eventFilter(self, source, event):
@@ -76,7 +97,7 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                self.df = self.df.loc[0:1000]
+                # self.df = self.df.loc[0:1000]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
