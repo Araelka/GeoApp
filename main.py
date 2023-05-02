@@ -72,8 +72,6 @@ class Application(QMainWindow):
             time = headers.index('Время')
         except:
             return
-        max = 0
-        min = 0
 
         df = {"Дата": [], "Temperature Air, °C": []}
         df = pd.DataFrame(df)
