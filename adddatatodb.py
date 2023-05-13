@@ -28,7 +28,6 @@ class Adddatatodb(QDialog):
             self.ui.RH_comboBox.addItem(headers[i], i)
             self.ui.PAR_comboBox.addItem(headers[i], i)
             self.ui.rain_comboBox.addItem(headers[i], i)
-            self.ui.current_comboBox.addItem(headers[i], i)
             self.ui.pressure_comboBox.addItem(headers[i], i)
             self.ui.gust_speed_comboBox.addItem(headers[i], i)
             self.ui.wind_speed_comboBox.addItem(headers[i], i)

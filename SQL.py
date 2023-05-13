@@ -22,7 +22,7 @@ Query = QSqlQuery()
 # Query.exec("DROP TABLE solar_radiation")
 # Query.exec("DROP TABLE wind_direction")
 # Query.exec("DROP TABLE temperature_ground")
-# Query.exec("DROP TABLE observations")
+Query.exec("DROP TABLE observations")
 # Query.exec("DROP TABLE sensors")
 # Query.exec("DROP TABLE type_sensors")
 

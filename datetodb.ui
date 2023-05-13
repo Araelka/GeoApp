@@ -409,10 +409,10 @@
      </item>
     </layout>
    </item>
-   <item row="5" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_5">
+   <item row="14" column="0">
+    <layout class="QHBoxLayout" name="horizontalLayout_15">
      <item>
-      <widget class="QLabel" name="label_6">
+      <widget class="QLabel" name="label_22">
        <property name="minimumSize">
         <size>
          <width>130</width>
@@ -438,12 +438,12 @@
         </font>
        </property>
        <property name="text">
-        <string>Current</string>
+        <string>Solar Radiation</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="current_comboBox">
+      <widget class="QComboBox" name="solar_radiation_comboBox">
        <property name="minimumSize">
         <size>
          <width>230</width>
@@ -471,7 +471,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_10">
+      <widget class="QLabel" name="label_23">
        <property name="minimumSize">
         <size>
          <width>130</width>
@@ -491,13 +491,42 @@
         </font>
        </property>
        <property name="text">
-        <string>mA</string>
+        <string>W/m²</string>
        </property>
       </widget>
      </item>
     </layout>
    </item>
-   <item row="6" column="0">
+   <item row="15" column="0">
+    <layout class="QGridLayout" name="gridLayout">
+     <item row="0" column="0">
+      <widget class="QPushButton" name="add_date_to_db_pushButton">
+       <property name="minimumSize">
+        <size>
+         <width>230</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>230</width>
+         <height>30</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+         <pointsize>14</pointsize>
+        </font>
+       </property>
+       <property name="text">
+        <string>Добавить</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="5" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_6">
      <item>
       <widget class="QLabel" name="label_7">
@@ -585,7 +614,7 @@
      </item>
     </layout>
    </item>
-   <item row="7" column="0">
+   <item row="6" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_7">
      <item>
       <widget class="QLabel" name="label_16">
@@ -687,7 +716,7 @@
      </item>
     </layout>
    </item>
-   <item row="8" column="0">
+   <item row="7" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_8">
      <item>
       <widget class="QLabel" name="label_9">
@@ -775,7 +804,7 @@
      </item>
     </layout>
    </item>
-   <item row="9" column="0">
+   <item row="8" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_9">
      <item>
       <widget class="QLabel" name="label_12">
@@ -863,7 +892,7 @@
      </item>
     </layout>
    </item>
-   <item row="10" column="0">
+   <item row="9" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_10">
      <item>
       <widget class="QLabel" name="label_14">
@@ -951,7 +980,7 @@
      </item>
     </layout>
    </item>
-   <item row="11" column="0">
+   <item row="10" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_11">
      <item>
       <widget class="QLabel" name="label_15">
@@ -1039,7 +1068,7 @@
      </item>
     </layout>
    </item>
-   <item row="12" column="0">
+   <item row="11" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_12">
      <item>
       <widget class="QLabel" name="label_8">
@@ -1141,7 +1170,7 @@
      </item>
     </layout>
    </item>
-   <item row="13" column="0">
+   <item row="12" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_13">
      <item>
       <widget class="QLabel" name="label_20">
@@ -1229,7 +1258,7 @@
      </item>
     </layout>
    </item>
-   <item row="14" column="0">
+   <item row="13" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout_14">
      <item>
       <widget class="QLabel" name="label_21">
@@ -1312,123 +1341,6 @@
        </property>
        <property name="text">
         <string/>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="15" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_15">
-     <item>
-      <widget class="QLabel" name="label_22">
-       <property name="minimumSize">
-        <size>
-         <width>130</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>130</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="baseSize">
-        <size>
-         <width>130</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>Arial</family>
-         <pointsize>14</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Solar Radiation</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QComboBox" name="solar_radiation_comboBox">
-       <property name="minimumSize">
-        <size>
-         <width>230</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>230</width>
-         <height>24</height>
-        </size>
-       </property>
-       <property name="baseSize">
-        <size>
-         <width>230</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>Arial</family>
-         <pointsize>14</pointsize>
-        </font>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_23">
-       <property name="minimumSize">
-        <size>
-         <width>130</width>
-         <height>31</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>130</width>
-         <height>31</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>Arial</family>
-         <pointsize>14</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>W/m²</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="16" column="0">
-    <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="0">
-      <widget class="QPushButton" name="add_date_to_db_pushButton">
-       <property name="minimumSize">
-        <size>
-         <width>230</width>
-         <height>30</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>230</width>
-         <height>30</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <family>Arial</family>
-         <pointsize>14</pointsize>
-        </font>
-       </property>
-       <property name="text">
-        <string>Добавить</string>
        </property>
       </widget>
      </item>

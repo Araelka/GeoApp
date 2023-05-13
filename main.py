@@ -15,6 +15,9 @@ from PyQt5.QtWidgets import (
     QStyle,
     QTableWidgetItem,
 )
+
+import time
+
 import pandas as pd
 import matplotlib.pyplot as plt   
 from datetime import datetime, date
@@ -24,6 +27,7 @@ import addsensor
 import adddatatodb
 import checkdata
 import map
+
 
 class Application(QMainWindow):
     def __init__(self):
@@ -130,7 +134,7 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                # self.df = self.df.loc[0:1000]
+                # self.df = self.df.loc[0:10]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
@@ -539,8 +543,9 @@ class Application(QMainWindow):
         tabel_name_value = ', '.join(value_dict)
 
 
-                
-
+        # start_uid = -1
+     
+        # start_time = time.perf_counter()
         try:
             for i in range (len(self.df.index)):
                 value = []
@@ -662,9 +667,24 @@ class Application(QMainWindow):
                             {value[0]})
                             """
                         )
-                    
+                
                 self.DBcheck(temp_check, RH_check)
+                    
+            # if start_uid == -1:
+            #     Query.exec(
+            #         """
+            #         SELECT MAX(uid_observations)  FROM observations
+            #         """
+            #     )  
 
+            # while Query.next():
+            #     start_uid = int(Query.value(0)) - len(self.df.index)
+
+                    
+            # self.DBcheck(start_uid, temp_check, RH_check)
+
+            # end_time = time.perf_counter()
+            # print(f"Данные загрузились за: {end_time - start_time:0.6f}")
             QMessageBox.about(self, "Загрузка данных", "Данные успешно загружены")
 
         except:
@@ -675,7 +695,7 @@ class Application(QMainWindow):
     def DBcheck(self, temp_check, RH_check):
         Query = QSqlQuery()
         Query.exec(
-            """
+            f"""
             SELECT uid_observations, temperature_air, temperature_ground, RH 
             FROM observations 
             WHERE uid_observations = (SELECT MAX(uid_observations)  FROM observations)
@@ -683,16 +703,17 @@ class Application(QMainWindow):
         )
 
         while Query.next():
-            if Query.value(1) < temp_check[0] or Query.value(1) > temp_check[1]:
+            if Query.value(1) != '' and (Query.value(1) < temp_check[0] or Query.value(1) > temp_check[1]):
                 id = Query.value(0)
-            elif Query.value(2) < temp_check[0] or Query.value(2) > temp_check[1]:
+            elif Query.value(2) != '' and (Query.value(2) < temp_check[0] or Query.value(2) > temp_check[1]):
                 id = Query.value(0)
-            elif Query.value(3) < RH_check[0] or Query.value(3) > RH_check[1]:
+            elif Query.value(3) != '' and (Query.value(3) < RH_check[0] or Query.value(3) > RH_check[1]):
                 id = Query.value(0)
             else:
-                return
+                continue
 
-            Query.exec(
+            QueryUpdate = QSqlQuery()
+            QueryUpdate.exec(
                 f"""
                 UPDATE observations
                 SET mark = 0
