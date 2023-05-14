@@ -110,10 +110,10 @@ class Application(QMainWindow):
                 count = 0
                 date = ''
             if count >= 15:
-                print(date, count, excount)
-                break
-        # print(res.index)
-        # print(res)
+                QMessageBox.about(self, "Переход температуры", f"Устойчивый переход температуры произошёл {date}")
+                return
+        QMessageBox.about(self, "Переход температуры", "Устойчивый переход темперартуры не обнаружен")
+        return
         
 
     # Фильтр на нажание кнопой ЛЕвая или правая
