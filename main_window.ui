@@ -334,10 +334,20 @@
      <addaction name="week_action"/>
      <addaction name="month_action"/>
     </widget>
+    <widget class="QMenu" name="menu_6">
+     <property name="title">
+      <string>Переход температуры</string>
+     </property>
+     <addaction name="minusFive_action"/>
+     <addaction name="Zero_action"/>
+     <addaction name="Five_action"/>
+    </widget>
     <addaction name="add_data_to_DB_action"/>
     <addaction name="menu_4"/>
     <addaction name="plot_action"/>
     <addaction name="menu_5"/>
+    <addaction name="menu_6"/>
+    <addaction name="recovery_action"/>
    </widget>
    <addaction name="menu"/>
    <addaction name="menu_2"/>
@@ -407,6 +417,26 @@
   <action name="month_action">
    <property name="text">
     <string>Месяц</string>
+   </property>
+  </action>
+  <action name="minusFive_action">
+   <property name="text">
+    <string>Через -5</string>
+   </property>
+  </action>
+  <action name="Zero_action">
+   <property name="text">
+    <string>Через 0</string>
+   </property>
+  </action>
+  <action name="Five_action">
+   <property name="text">
+    <string>Через +5</string>
+   </property>
+  </action>
+  <action name="recovery_action">
+   <property name="text">
+    <string>Восстановдение данных</string>
    </property>
   </action>
  </widget>

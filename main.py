@@ -54,18 +54,20 @@ class Application(QMainWindow):
         self.ui.max_action.triggered.connect(self.MAX)
         self.ui.min_action.triggered.connect(self.MIN)
         self.ui.mean_action.triggered.connect(self.MEAN)
-        # self.ui.plot_action.triggered.connect(self.ShowPlot)
-        self.ui.plot_action.triggered.connect(self.testFunc)
+        self.ui.plot_action.triggered.connect(self.ShowPlot)
         self.ui.day_action.triggered.connect(self.DayGroup)
         self.ui.week_action.triggered.connect(self.WeekGroup)
         self.ui.month_action.triggered.connect(self.MonthGroup)
         self.ui.save_action.triggered.connect(self.SaveFile)
+        self.ui.Zero_action.triggered.connect(lambda: self.TemperatureTransition(0))
+        self.ui.minusFive_action.triggered.connect(lambda: self.TemperatureTransition(-5))
+        self.ui.Five_action.triggered.connect(lambda: self.TemperatureTransition(5))
         
 
 
     # Требуется доработка
     # Устойчивый переход температуры через заданный рубеж
-    def testFunc(self):
+    def TemperatureTransition(self, t = 0):
         rows = self.ui.tableWidget.rowCount()
         headers = []
         for column in range(self.ui.tableWidget.columnCount()):
@@ -94,26 +96,68 @@ class Application(QMainWindow):
         count = 0
         excount = 0
         e = 7
-        temperature = 0
-        for i in res.index:
-            if res['Temperature Air, °C'][i] < temperature and date == '' and excount <= e:
-                # print(res['Temperature Air, °C'][i])
-                count += 1
-                date = str(res['Дата'][i])
-            elif res['Temperature Air, °C'][i] < temperature and date != '' and excount <= e:
-                count += 1
-            elif res['Temperature Air, °C'][i] > temperature:
-                excount += 1
-                # count -= 1
-            if excount > e:
-                excount = 0
-                count = 0
-                date = ''
-            if count >= 15:
-                QMessageBox.about(self, "Переход температуры", f"Устойчивый переход температуры произошёл {date}")
-                return
-        QMessageBox.about(self, "Переход температуры", "Устойчивый переход темперартуры не обнаружен")
-        return
+        temperature = t
+
+        buttonCheck = QMessageBox()
+        buttonCheck.setWindowTitle("Выбор перехода")
+        buttonCheck.setIcon(QMessageBox.Question)
+        buttonCheck.setText("Какой устойчивый переход тепмературы определять?")
+        bY = buttonCheck.addButton("Весенний", QMessageBox.YesRole)
+        bN = buttonCheck.addButton("Осенний", QMessageBox.NoRole)
+        buttonCheck.exec_()
+
+        if buttonCheck.clickedButton() == bN:
+            for i in res.index:
+                if res['Temperature Air, °C'][i] < temperature and date == '' and excount <= e:
+                    # print(res['Temperature Air, °C'][i])
+                    count += 1
+                    date = str(res['Дата'][i])
+                elif res['Temperature Air, °C'][i] < temperature and date != '' and excount <= e:
+                    count += 1
+                elif res['Temperature Air, °C'][i] > temperature:
+                    excount += 1
+                    # count -= 1
+                if excount > e:
+                    excount = 0
+                    count = 0
+                    date = ''
+                if count >= 30:
+                    # QMessageBox.about(self, "Переход температуры", f"Устойчивый переход температуры произошёл {date}")
+                    # return
+                    break
+            # QMessageBox.about(self, "Переход температуры", "Устойчивый переход темперартуры не обнаружен")
+            # return
+        
+        elif buttonCheck.clickedButton() == bY:
+            for i in res.index:
+                if res['Temperature Air, °C'][i] > temperature and date == '' and excount <= e:
+                    # print(res['Temperature Air, °C'][i])
+                    count += 1
+                    date = str(res['Дата'][i])
+                elif res['Temperature Air, °C'][i] > temperature and date != '' and excount <= e:
+                    count += 1
+                elif res['Temperature Air, °C'][i] < temperature:
+                    excount += 1
+                    # count -= 1
+                if excount > e:
+                    excount = 0
+                    count = 0
+                    date = ''
+                if count >= 30:
+                    # QMessageBox.about(self, "Переход температуры", f"Устойчивый переход температуры произошёл {date}")
+                    break
+            # QMessageBox.about(self, "Переход температуры", "Устойчивый переход темперартуры не обнаружен")
+            # return
+        
+        mbox = QMessageBox()      
+        mbox.setWindowTitle("Переход температуры")   
+        if date != '':
+            mbox.setText(f"Устойчивый переход температуры через {temperature} произошёл {date}")
+        else:
+            mbox.setText("Устойчивый переход темперартуры не обнаружен")
+        mbox.exec_()
+
+
         
 
     # Фильтр на нажание кнопой ЛЕвая или правая
