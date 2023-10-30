@@ -68,6 +68,15 @@ class Application(QMainWindow):
     # Требуется доработка
     # Устойчивый переход температуры через заданный рубеж
     def TemperatureTransition(self, t = 0):
+        
+        buttonCheck = QMessageBox()
+        buttonCheck.setWindowTitle("Выбор перехода")
+        buttonCheck.setIcon(QMessageBox.Question)
+        buttonCheck.setText("Какой устойчивый переход тепмературы определять?")
+        bY = buttonCheck.addButton("Весенний", QMessageBox.YesRole)
+        bN = buttonCheck.addButton("Осенний", QMessageBox.NoRole)
+        buttonCheck.exec_()
+
         rows = self.ui.tableWidget.rowCount()
         headers = []
         for column in range(self.ui.tableWidget.columnCount()):
@@ -98,13 +107,6 @@ class Application(QMainWindow):
         e = 7
         temperature = t
 
-        buttonCheck = QMessageBox()
-        buttonCheck.setWindowTitle("Выбор перехода")
-        buttonCheck.setIcon(QMessageBox.Question)
-        buttonCheck.setText("Какой устойчивый переход тепмературы определять?")
-        bY = buttonCheck.addButton("Весенний", QMessageBox.YesRole)
-        bN = buttonCheck.addButton("Осенний", QMessageBox.NoRole)
-        buttonCheck.exec_()
 
         if buttonCheck.clickedButton() == bN:
             for i in res.index:
@@ -178,7 +180,8 @@ class Application(QMainWindow):
         if filename[0]:
             try:
                 self.df = pd.read_csv(filename[0], skiprows = 1)
-                # self.df = self.df.loc[0:10]
+                # Ограничение на загрузку данных, для тестирования
+                # self.df = self.df.loc[0:100]
             except:
                 return 0
             self.df = self.df.drop(columns = self.df.columns[0])
