@@ -1,3 +1,4 @@
+# Подключаение PtQT для графического интерфейса
 from GUImainwindow import Ui_MainWindow
 import sys
 from statistics import mean
@@ -16,20 +17,26 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
 )
 
+# Подключение основных бибилотек
 import time
-
 import pandas as pd
 import matplotlib.pyplot as plt   
 from datetime import datetime, date
 from xlsxwriter.workbook import Workbook 
 
+# Подключение дополнительных файлов с классами и функциями для работы
+# Добавление датчика в базу данных
 import addsensor
+# Добавление данных в базу данных
 import adddatatodb
+# Проверка данных
 import checkdata
+# Работа с картой
 import map
 
 
 class Application(QMainWindow):
+    # Инициализация основгого окна и назвачения действия при нажатии кнопок
     def __init__(self):
         super(Application, self).__init__()
         self.ui = Ui_MainWindow()
@@ -64,8 +71,284 @@ class Application(QMainWindow):
         self.ui.Five_action.triggered.connect(lambda: self.TemperatureTransition(5))
         
 
+    # Загрузка данных из в файла
+    def uploadfile(self):
+        # Открытие нужного файла
+        filename = QFileDialog.getOpenFileName(self, 'Открыть файл', '*.csv')
+        
+        # Если файл выбран
+        if filename[0]:
+            try:
+                self.df = pd.read_csv(filename[0], skiprows = 1)
+                # Ограничение на загрузку данных, для тестирования
+                # self.df = self.df.loc[0:100]
+            except:
+                return 0
+            
+            # Удаление первого столбца с номером строки
+            self.df = self.df.drop(columns = self.df.columns[0])
+            self.df[self.df.columns[0]] = pd.to_datetime(self.df[self.df.columns[0]])
+            # Изменить формат даты и времени
+            self.df.insert(0, 'Time, GMT+07:00', self.df['Date Time, GMT+07:00'].dt.time)
+            self.df.insert(0, 'Date, GMT+07:00', self.df['Date Time, GMT+07:00'].dt.date)
+            self.df = self.df.drop(columns=self.df.columns[2])
+            # Отображение данных в таблице
+            self.showlastfile(self.df)
 
-    # Требуется доработка
+        
+    # Отрисовка последнего или переданного datafrema в таблице
+    def showlastfile(self, df):
+        # Очистка таблицы
+        self.ui.tableWidget.clear()
+
+        # Если dataframe не передавали, используется последний
+        try:
+            if df==False:
+                try:
+                    df = self.df
+                except:
+                    pass
+        except:
+            pass
+
+        # Отображает данные в таблице
+        try:
+            self.ui.tableWidget.setColumnCount(len(df.columns))
+            self.ui.tableWidget.setRowCount(len(df.index))
+            self.ui.tableWidget.setHorizontalHeaderLabels(df.columns)
+
+            for i in range (len(df.index)):
+                for j in range (len(df.columns)):
+                    self.ui.tableWidget.setItem(i, j, QTableWidgetItem(str(df.iat[i,j])))
+
+            # Автоматически изменяет ширину столбцов под содержимое, но при больших данных возникают проблемы с производительностью
+            # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+        except:
+            pass
+
+
+    # Открытие окна с сотношением столбцов и загрузка в базу
+    def loadfiletoDB(self):
+        Query = QSqlQuery()
+        # Выбор всех датчиков из базы
+        Query.exec(
+            """
+            SELECT uid_sensor, name, serial_number, N_S, E_W, location FROM sensors
+            """
+        )
+
+        sens = {}
+
+        # Приводит строку с датчиками к нужному виду
+        while Query.next():
+            sens[Query.value(0)] =str(Query.value(1)) + ' | ' + str(Query.value(2)) + ' | ' + str(Query.value(5))
+
+        headers = {}
+        headers[-1] = ' '
+        try:
+            heads = list(self.df.columns)
+            k = 0
+            for i in heads:
+                headers[k] = i
+                k +=1
+        except:
+            pass
+
+        # Отображает окно для соотношения столбцов
+        windowdate = adddatatodb.Adddatatodb(self, sens, headers)
+        windowdate.exec_()
+        
+        # Если окно закрыли выход из функции
+        if windowdate.isClose == 0:
+            return 0
+
+        # Отображает окно для установки ограничений на параметры
+        checkwindow = checkdata.DataCheck(self)
+        checkwindow.exec_()
+
+        # Запись ограничений
+        temp_check = checkwindow.temp
+        RH_check = checkwindow.RH
+        
+        data_dict_W = windowdate.data_dict
+        type_dict_W = windowdate.type_dict
+        data_dict = {}
+        value_dict = {}
+
+        for i in data_dict_W:
+            if data_dict_W[i] != -1 and i in ['uid_sensor', 'date', 'time']:
+                data_dict[i] = data_dict_W[i]
+            elif data_dict_W[i] != -1 and i not in ['uid_sensor', 'date', 'time']:
+                value_dict[i] = data_dict_W[i]
+
+        tabel_name_data = ', '.join(data_dict)
+        tabel_name_value = ', '.join(value_dict)
+
+        # Добалвение данных в массив значений, проверка в каких градусах измеряется температура в F или C, если в F то перевод к C
+        try:
+            for i in range (len(self.df.index)):
+                value = []
+                for name in value_dict:
+                    if name not in ['temperature_air', 'temperature_ground', 'RH']:
+                        value.append(float(self.df.iat[i,value_dict[f'{name}']]))
+
+                    elif name in ['temperature_air'] and type_dict_W['air_type'] == 0:
+                        temperature = float((5/9)*(float(self.df.iat[i,value_dict[f'{name}']])-32))
+                        value.append(round(float(temperature), 3))
+                    elif name in ['temperature_air'] and type_dict_W['air_type'] == 1:
+                        temperature = float(self.df.iat[i,value_dict[f'{name}']])
+                        value.append(round(float(temperature), 3))
+
+                    elif name in ['temperature_ground'] and type_dict_W['ground_type'] == 0:
+                        temperature = float((5/9)*(float(self.df.iat[i,value_dict[f'{name}']])-32))
+                        value.append(round(float(temperature), 3))
+                    elif name in ['temperature_ground'] and type_dict_W['ground_type'] == 1:
+                        temperature = float(self.df.iat[i,value_dict[f'{name}']])
+                        value.append(round(float(temperature), 3))
+                    
+                    elif name in ['RH']:
+                        RH = float(self.df.iat[i,value_dict[f'{name}']])
+                        value.append(float(RH))
+                
+                    
+                # Количество полученных столбцов
+                count = len(value)
+
+                # Загрузка наблюдений в зависимости от количества столбцов
+                # В идеале изменить запрос, добавив в него цикл
+                match count:
+                    case 11:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]}, {value[8]}, {value[9]}, {value[10]})
+                            """
+                        )
+                    case 10:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]}, {value[8]}, {value[9]})
+                            """
+                        )
+                    case 9:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]}, {value[8]})
+                            """
+                        )
+                    case 8:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]})
+                            """
+                        )
+                    case 7:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]})
+                            """
+                        )
+                    case 6:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]})
+                            """
+                        )
+                    case 5:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]})
+                            """
+                        )
+                    case 4:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]}, {value[3]})
+                            """
+                        )
+                    case 3:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]}, {value[2]})
+                            """
+                        )
+                    case 2:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]}, {value[1]})
+                            """
+                        )
+                    case 1:
+                        Query.exec(
+                            f"""
+                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
+                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
+                            {value[0]})
+                            """
+                        )
+                
+                # Вызов функции проверки входных данных
+                self.DBcheck(temp_check, RH_check)
+                    
+            QMessageBox.about(self, "Загрузка данных", "Данные успешно загружены")
+
+        except:
+
+            QMessageBox.about(self, "Загрузка данных", "Не удалось загрузить данные\nПроверьте сотношение столбцов")
+
+    # Проверка ограничений входных данных из файла  
+    def DBcheck(self, temp_check, RH_check):
+        Query = QSqlQuery()
+        # Получение последне
+        Query.exec(
+            f"""
+            SELECT uid_observations, temperature_air, temperature_ground, RH 
+            FROM observations 
+            WHERE uid_observations = (SELECT MAX(uid_observations)  FROM observations)
+            """
+        )
+
+        while Query.next():
+            if Query.value(1) != '' and (Query.value(1) < temp_check[0] or Query.value(1) > temp_check[1]):
+                id = Query.value(0)
+            elif Query.value(2) != '' and (Query.value(2) < temp_check[0] or Query.value(2) > temp_check[1]):
+                id = Query.value(0)
+            elif Query.value(3) != '' and (Query.value(3) < RH_check[0] or Query.value(3) > RH_check[1]):
+                id = Query.value(0)
+            else:
+                continue
+
+            QueryUpdate = QSqlQuery()
+            QueryUpdate.exec(
+                f"""
+                UPDATE observations
+                SET mark = 0
+                WHERE uid_observations = {id}
+                """
+            )
+
+
+    # Требуется доработка (опционально)
     # Устойчивый переход температуры через заданный рубеж
     def TemperatureTransition(self, t = 0):
         
@@ -160,38 +443,6 @@ class Application(QMainWindow):
         mbox.exec_()
 
 
-        
-
-    # Фильтр на нажание кнопой ЛЕвая или правая
-    # def eventFilter(self, source, event):
-    #     if event.type() == QtCore.QEvent.MouseButtonPress:
-    #         if event.button() == QtCore.Qt.LeftButton:
-    #             return 0
-    #         elif event.button() == QtCore.Qt.RightButton:
-    #             pass
-    #     return super().eventFilter(source, event)
-
-
-    
-    # Загрузка данных из в файла в dataframe
-    def uploadfile(self):
-        filename = QFileDialog.getOpenFileName(self, 'Открыть файл', '*.csv')
-        
-        if filename[0]:
-            try:
-                self.df = pd.read_csv(filename[0], skiprows = 1)
-                # Ограничение на загрузку данных, для тестирования
-                # self.df = self.df.loc[0:100]
-            except:
-                return 0
-            self.df = self.df.drop(columns = self.df.columns[0])
-            self.df[self.df.columns[0]] = pd.to_datetime(self.df[self.df.columns[0]])
-            # Изменить формат даты и времени
-            self.df.insert(0, 'Time, GMT+07:00', self.df['Date Time, GMT+07:00'].dt.time)
-            self.df.insert(0, 'Date, GMT+07:00', self.df['Date Time, GMT+07:00'].dt.date)
-            self.df = self.df.drop(columns=self.df.columns[2])
-            self.showlastfile(self.df)
-
 
     # Сохранение данных из таблицы в файл
     def SaveFile(self):
@@ -272,32 +523,7 @@ class Application(QMainWindow):
 
         return typetb
 
-# 
-    # Отрисовка последнего или переданного datafrema
-    def showlastfile(self, df):
-        self.ui.tableWidget.clear()
-        try:
-            if df==False:
-                try:
-                    df = self.df
-                except:
-                    pass
-        except:
-            pass
 
-        try:
-            self.ui.tableWidget.setColumnCount(len(df.columns))
-            self.ui.tableWidget.setRowCount(len(df.index))
-            self.ui.tableWidget.setHorizontalHeaderLabels(df.columns)
-
-            for i in range (len(df.index)):
-                for j in range (len(df.columns)):
-                    self.ui.tableWidget.setItem(i, j, QTableWidgetItem(str(df.iat[i,j])))
-
-            # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-            # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
-        except:
-            pass
 
 
 
@@ -539,234 +765,9 @@ class Application(QMainWindow):
         except:
             pass
 
-    # Открытие окна с сотношением столбцов и загрузка в базу
-    def loadfiletoDB(self):
-        Query = QSqlQuery()
-        Query.exec(
-            """
-            SELECT uid_sensor, name, serial_number, N_S, E_W, location FROM sensors
-            """
-        )
-
-        sens = {}
-
-        while Query.next():
-            sens[Query.value(0)] =str(Query.value(1)) + ' | ' + str(Query.value(2)) + ' | ' + str(Query.value(5))
-
-        headers = {}
-        headers[-1] = ' '
-        try:
-            heads = list(self.df.columns)
-            k = 0
-            for i in heads:
-                headers[k] = i
-                k +=1
-        except:
-            pass
-
-        windowdate = adddatatodb.Adddatatodb(self, sens, headers)
-        windowdate.exec_()
-        
-        if windowdate.isClose == 0:
-            return 0
-
-        checkwindow = checkdata.DataCheck(self)
-        checkwindow.exec_()
-
-        temp_check = checkwindow.temp
-        RH_check = checkwindow.RH
-        
-        data_dict_W = windowdate.data_dict
-        type_dict_W = windowdate.type_dict
-        data_dict = {}
-        value_dict = {}
-        for i in data_dict_W:
-            if data_dict_W[i] != -1 and i in ['uid_sensor', 'date', 'time']:
-                data_dict[i] = data_dict_W[i]
-            elif data_dict_W[i] != -1 and i not in ['uid_sensor', 'date', 'time']:
-                value_dict[i] = data_dict_W[i]
-
-        tabel_name_data = ', '.join(data_dict)
-        tabel_name_value = ', '.join(value_dict)
-
-
-        # start_uid = -1
-     
-        # start_time = time.perf_counter()
-        try:
-            for i in range (len(self.df.index)):
-                value = []
-                for name in value_dict:
-                    # print(type_dict_W['air_type'])
-                    if name not in ['temperature_air', 'temperature_ground', 'RH']:
-                        value.append(float(self.df.iat[i,value_dict[f'{name}']]))
-
-                    elif name in ['temperature_air'] and type_dict_W['air_type'] == 0:
-                        temperature = float((5/9)*(float(self.df.iat[i,value_dict[f'{name}']])-32))
-                        value.append(round(float(temperature), 3))
-                    elif name in ['temperature_air'] and type_dict_W['air_type'] == 1:
-                        temperature = float(self.df.iat[i,value_dict[f'{name}']])
-                        value.append(round(float(temperature), 3))
-
-                    elif name in ['temperature_ground'] and type_dict_W['ground_type'] == 0:
-                        temperature = float((5/9)*(float(self.df.iat[i,value_dict[f'{name}']])-32))
-                        value.append(round(float(temperature), 3))
-                    elif name in ['temperature_ground'] and type_dict_W['ground_type'] == 1:
-                        temperature = float(self.df.iat[i,value_dict[f'{name}']])
-                        value.append(round(float(temperature), 3))
-                    
-                    elif name in ['RH']:
-                        RH = float(self.df.iat[i,value_dict[f'{name}']])
-                        value.append(float(RH))
-                
-                # print(value)
-                
-                    
-                count = len(value)
-
-                # Загрузка наблюдений
-                match count:
-                    case 11:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]}, {value[8]}, {value[9]}, {value[10]})
-                            """
-                        )
-                    case 10:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]}, {value[8]}, {value[9]})
-                            """
-                        )
-                    case 9:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]}, {value[8]})
-                            """
-                        )
-                    case 8:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]}, {value[7]})
-                            """
-                        )
-                    case 7:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]}, {value[6]})
-                            """
-                        )
-                    case 6:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]}, {value[5]})
-                            """
-                        )
-                    case 5:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]}, {value[4]})
-                            """
-                        )
-                    case 4:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]}, {value[3]})
-                            """
-                        )
-                    case 3:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]}, {value[2]})
-                            """
-                        )
-                    case 2:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]}, {value[1]})
-                            """
-                        )
-                    case 1:
-                        Query.exec(
-                            f"""
-                            INSERT INTO observations ({tabel_name_data}, {tabel_name_value})
-                            VALUES ({data_dict['uid_sensor']}, '{str(self.df.iat[i,data_dict['date']])}', '{str(self.df.iat[i,data_dict['time']])}',
-                            {value[0]})
-                            """
-                        )
-                
-                self.DBcheck(temp_check, RH_check)
-                    
-            # if start_uid == -1:
-            #     Query.exec(
-            #         """
-            #         SELECT MAX(uid_observations)  FROM observations
-            #         """
-            #     )  
-
-            # while Query.next():
-            #     start_uid = int(Query.value(0)) - len(self.df.index)
-
-                    
-            # self.DBcheck(start_uid, temp_check, RH_check)
-
-            # end_time = time.perf_counter()
-            # print(f"Данные загрузились за: {end_time - start_time:0.6f}")
-            QMessageBox.about(self, "Загрузка данных", "Данные успешно загружены")
-
-        except:
-            QMessageBox.about(self, "Загрузка данных", "Не удалось загрузить данные\nПроверьте сотношение столбцов")
             
 
-    #  Проверка ограничений входных данных из файла  
-    def DBcheck(self, temp_check, RH_check):
-        Query = QSqlQuery()
-        Query.exec(
-            f"""
-            SELECT uid_observations, temperature_air, temperature_ground, RH 
-            FROM observations 
-            WHERE uid_observations = (SELECT MAX(uid_observations)  FROM observations)
-            """
-        )
-
-        while Query.next():
-            if Query.value(1) != '' and (Query.value(1) < temp_check[0] or Query.value(1) > temp_check[1]):
-                id = Query.value(0)
-            elif Query.value(2) != '' and (Query.value(2) < temp_check[0] or Query.value(2) > temp_check[1]):
-                id = Query.value(0)
-            elif Query.value(3) != '' and (Query.value(3) < RH_check[0] or Query.value(3) > RH_check[1]):
-                id = Query.value(0)
-            else:
-                continue
-
-            QueryUpdate = QSqlQuery()
-            QueryUpdate.exec(
-                f"""
-                UPDATE observations
-                SET mark = 0
-                WHERE uid_observations = {id}
-                """
-            )
+    
 
 
     def DayGroup(self):
@@ -852,17 +853,7 @@ class Application(QMainWindow):
                 res_g = pd.DataFrame()
                 N = 4
                 pass
-            
-            # res['Дата'] = pd.to_datetime(res["Дата"]).dt.date
-            # res = res.round(2)
-            # res_min = res_min.round(2)
-            # res_max = res_max.round(2)
 
-            # res_g = res_g.round(2)
-            # res_min_g = res_min_g.round(2)
-            # res_max_g = res_max_g.round(2)
-
-            # print(res_max)
 
             self.ui.tableWidget.clear()
             self.ui.tableWidget.setRowCount(0)
