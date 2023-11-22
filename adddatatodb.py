@@ -69,64 +69,6 @@ class Adddatatodb(QDialog):
             self.type_dict['ground_type'] = int(self.ui.tempCF_ground_comboBox.currentData())
         except:
             pass
-        # try:
-        #     self.date = int(self.ui.date_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.time = int(self.ui.time_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.water_content = int(self.ui.water_content_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.current = int(self.ui.current_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.PAR = int(self.ui.PAR_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.temp_air = int(self.ui.temp_air_comboBox.currentData())
-        #     self.airtype = int(self.ui.tempC_air_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.RH = int(self.ui.RH_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.wind_speed = int(self.ui.wind_speed_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.gust_speed = int(self.ui.gust_speed_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.wind_direction = int(self.ui.wond_direction_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.temp_ground = int(self.ui.temp_ground_comboBox.currentData())
-        #     self.groundtype = int(self.ui.tempCF_ground_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.pressure = int(self.ui.pressure_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.rain = int(self.ui.rain_comboBox.currentData())
-        # except:
-        #     pass
-        # try:
-        #     self.solar_radiation = int(self.ui.solar_radiation_comboBox.currentData())
-        # except:
-        #     pass
 
         self.isClose = 1    
         self.close()

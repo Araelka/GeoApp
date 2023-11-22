@@ -319,7 +319,7 @@ class Application(QMainWindow):
     # Проверка ограничений входных данных из файла  
     def DBcheck(self, temp_check, RH_check):
         Query = QSqlQuery()
-        # Получение последне
+        # Получение последнего добавленного значения в базу данных
         Query.exec(
             f"""
             SELECT uid_observations, temperature_air, temperature_ground, RH 
@@ -329,6 +329,7 @@ class Application(QMainWindow):
         )
 
         while Query.next():
+            # Проверка условий на выход данных за пределы допустимых значений
             if Query.value(1) != '' and (Query.value(1) < temp_check[0] or Query.value(1) > temp_check[1]):
                 id = Query.value(0)
             elif Query.value(2) != '' and (Query.value(2) < temp_check[0] or Query.value(2) > temp_check[1]):
@@ -338,6 +339,7 @@ class Application(QMainWindow):
             else:
                 continue
 
+            # Если значение данных выходит за пределы, изменяется метка корректности в базе
             QueryUpdate = QSqlQuery()
             QueryUpdate.exec(
                 f"""
@@ -348,10 +350,209 @@ class Application(QMainWindow):
             )
 
 
-    # Требуется доработка (опционально)
+    # Отображение всех данных с возможностью выборки
+    def showtable(self):
+        Query = QSqlQuery()
+
+        # Выбор по дате
+        if self.ui.date_checkBox.isChecked() == True:
+            datacheck = f"WHERE datetime(observations.date,  observations.time) >= '{self.ui.dateTimeEdit_min.dateTime().toPyDateTime()}' AND datetime(observations.date, observations.time) <= '{self.ui.dateTimeEdit_max.dateTime().toPyDateTime()}'"
+            ch = 1
+        else:
+            datacheck = ''
+            ch = 0
+
+        # Выбор по датчику
+        if self.ui.sensor_checkBox.isChecked() == True and int(self.ui.sensors_comboBox.currentData()) > -1:
+            if ch == 1:
+                w = 'AND'
+            else:
+                w = 'WHERE'
+            sensorcheck = f"{w} sensors.uid_sensor == {int(self.ui.sensors_comboBox.currentData())}"
+            ch = 1
+        else:
+            sensorcheck = ''
+            ch = 0
+
+        # Выбор по корректности
+        if self.ui.true_checkBox.isChecked() == True and int(self.ui.true_comboBox.currentData()) > -1:
+            if ch == 1:
+                w = 'AND'
+            else:
+                w = 'WHERE'
+            if int(self.ui.true_comboBox.currentData()) == 0:
+                truecheck = f"{w} observations.mark == {int(self.ui.true_comboBox.currentData()+1)}"
+            else:
+                truecheck = f"{w} observations.mark == {int(self.ui.true_comboBox.currentData()-1)}"
+            ch = 1
+        else:
+            truecheck = ''
+            ch = 0    
+
+        # Выбор по типу данных
+        if self.ui.type_checkBox.isChecked() == True and str(self.ui.type_comboBox.currentData()) != 'Все':   
+            if ch == 1:
+                w = "AND"
+            else:
+                w = "WHERE"
+            datetype = f"observations.{str(self.ui.type_comboBox.currentData())},"
+            # typecheck = f"JOIN {str(self.ui.type_comboBox.currentData())} ON {str(self.ui.type_comboBox.currentData())}.uid_observations = observations.uid_observations"
+            NH = 9
+        else:
+            datetype = """
+            observations.water_content, observations.PAR, observations.temperature_air,
+            observations.RH, observations.wind_speed, observations.gust_speed, observations.wind_direction,
+            observations.temperature_ground, observations.pressure, observations.rain, observations.solar_radiation,
+            """
+
+            NH = 19
+
+
+        # Запрос на выбор данных
+        Query.exec(
+            f"""
+            SELECT observations.mark, observations.uid_observations,
+            sensors.name, sensors.serial_number, type_sensors.type,
+            observations.date, observations.time, 
+            {datetype}
+            observations.mark
+            FROM observations
+            LEFT JOIN sensors ON sensors.uid_sensor = observations.uid_sensor
+            LEFT JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type
+            {datacheck}
+            {sensorcheck}
+            {truecheck}
+            """
+        )
+
+        # Отображение данных
+        self.ui.tableWidget.clear()
+        self.ui.tableWidget.setRowCount(0)
+        self.ui.tableWidget.setColumnCount(NH)
+        if NH == 19:
+            self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
+                                                        'Water Content, m³/m³', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
+                                                        'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
+                                                        'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²', 'Корректность'])
+        else:
+            self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
+                                                        f'{str(self.ui.type_comboBox.currentText())}', 'Корректность'])
+
+        
+
+        # Изменение метки корректности
+        def changeS():
+            row = self.ui.tableWidget.currentRow()
+            id = int(self.ui.tableWidget.item(row, 1).text())
+            if CheckBox[row].isChecked() == True:
+                mark = 1
+                self.ui.tableWidget.setItem(row, (NH-1), QTableWidgetItem(str("Верно")))
+                if row%2 ==1:
+                    self.ui.tableWidget.item(row, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
+            else:
+                mark = 0
+                self.ui.tableWidget.setItem(row, (NH-1), QTableWidgetItem(str("Ошибка")))
+                if row%2 ==1:
+                    self.ui.tableWidget.item(row, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
+
+            Query.exec(
+                f"""
+                UPDATE observations
+                SET mark = {mark}
+                WHERE uid_observations = {id}
+                """
+            )
+
+        CheckBox = []
+
+        # Отображение метки корректности
+        try:
+            while Query.next():
+                rows = self.ui.tableWidget.rowCount()
+                self.ui.tableWidget.setRowCount(rows + 1)
+                i = 0
+                for i in range(NH):
+                    self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
+                    if rows%2 ==1:
+                        self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
+
+            for rows in range(self.ui.tableWidget.rowCount()):
+                CheckBox.append(QtWidgets.QCheckBox())
+                if int(self.ui.tableWidget.item(rows, 0).text()) == 1:
+                    self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Верно")))
+                    if rows%2 ==1:
+                        self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
+                    CheckBox[-1].setChecked(True)
+                    self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
+                    CheckBox[-1].stateChanged.connect(changeS)
+                else:
+                    self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Ошибка")))
+                    if rows%2 ==1:
+                        self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
+                    self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
+                    CheckBox[-1].stateChanged.connect(changeS)
+                
+                
+            self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
+
+        except:
+            QMessageBox.about(self, "Данные", "Произошла ошибка отображения")
+            return
+    
+   # Поиск максимального значения в стобце     
+    def MAX(self):
+        max_list = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        try:
+            for row in range(rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    max_list.append(float(self.ui.tableWidget.item(row, column).text()))
+            mbox = QMessageBox()
+            mbox.setText("Максимум по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(max(max_list)))
+            mbox.setWindowTitle("Максимум")
+            mbox.exec_()
+        except:
+            pass
+
+    # Поиск минимального значения в стобце
+    def MIN(self):
+        min_list = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        try:
+            for row in range(rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    min_list.append(float(self.ui.tableWidget.item(row, column).text()))
+            mbox = QMessageBox()
+            mbox.setText("Минимум по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(min(min_list)))
+            mbox.setWindowTitle("Минимум")
+            mbox.exec_()
+        except:
+            pass
+
+    # Поиск среднего значения в стобце
+    def MEAN(self):
+        mean_list = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        try:
+            for row in range(rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    mean_list.append(float(self.ui.tableWidget.item(row, column).text()))
+            mbox = QMessageBox()
+            mbox.setText("Среднее по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(round(mean(mean_list), 2)))
+            mbox.setWindowTitle("Среднее")
+            mbox.exec_()
+        except:
+            pass
+
     # Устойчивый переход температуры через заданный рубеж
+    # Требуется доработка (опционально), возможны проблемы с производительностью
     def TemperatureTransition(self, t = 0):
         
+        # Отображение окна для выбора перехода
         buttonCheck = QMessageBox()
         buttonCheck.setWindowTitle("Выбор перехода")
         buttonCheck.setIcon(QMessageBox.Question)
@@ -360,6 +561,7 @@ class Application(QMainWindow):
         bN = buttonCheck.addButton("Осенний", QMessageBox.NoRole)
         buttonCheck.exec_()
 
+        # Получение столбцов и поиск столбца с температурой, датой и временем
         rows = self.ui.tableWidget.rowCount()
         headers = []
         for column in range(self.ui.tableWidget.columnCount()):
@@ -374,12 +576,14 @@ class Application(QMainWindow):
         df = {"Дата": [], "Temperature Air, °C": []}
         df = pd.DataFrame(df)
 
+        # Добавление записей из таблицы в dataframe, если они корректны
         for row in range(rows):
             if self.ui.tableWidget.item(row , temperature).text() != '' and self.ui.tableWidget.item(row , 0).text() == '1':
                 row_a = [datetime.strptime(self.ui.tableWidget.item(row , date).text() + ' ' + self.ui.tableWidget.item(row , time).text(), '%Y-%m-%d %H:%M:%S'), 
                          float(self.ui.tableWidget.item(row , temperature).text())]
                 df.loc[len(df.index)] = row_a
 
+        # Группировка по дням
         res = df.groupby(pd.Grouper(key=df.columns[0], freq='D')).mean().reset_index()
         res['Дата'] = pd.to_datetime(res["Дата"]).dt.date
         res = res.round(5)
@@ -390,7 +594,7 @@ class Application(QMainWindow):
         e = 7
         temperature = t
 
-
+        # В зависимости от перехода применяется тот или иной метод для поиска перехода
         if buttonCheck.clickedButton() == bN:
             for i in res.index:
                 if res['Temperature Air, °C'][i] < temperature and date == '' and excount <= e:
@@ -407,11 +611,7 @@ class Application(QMainWindow):
                     count = 0
                     date = ''
                 if count >= 30:
-                    # QMessageBox.about(self, "Переход температуры", f"Устойчивый переход температуры произошёл {date}")
-                    # return
                     break
-            # QMessageBox.about(self, "Переход температуры", "Устойчивый переход темперартуры не обнаружен")
-            # return
         
         elif buttonCheck.clickedButton() == bY:
             for i in res.index:
@@ -429,11 +629,9 @@ class Application(QMainWindow):
                     count = 0
                     date = ''
                 if count >= 30:
-                    # QMessageBox.about(self, "Переход температуры", f"Устойчивый переход температуры произошёл {date}")
                     break
-            # QMessageBox.about(self, "Переход температуры", "Устойчивый переход темперартуры не обнаружен")
-            # return
-        
+                
+        # Вывод окна с результатами
         mbox = QMessageBox()      
         mbox.setWindowTitle("Переход температуры")   
         if date != '':
@@ -442,7 +640,28 @@ class Application(QMainWindow):
             mbox.setText("Устойчивый переход темперартуры не обнаружен")
         mbox.exec_()
 
-
+    # Отрисовка графиков по выбранному столбцу
+    def ShowPlot(self):
+        tempdate = []
+        column = self.ui.tableWidget.currentColumn()
+        rows = self.ui.tableWidget.rowCount()
+        tempframe = []
+        try:
+            for row in range (rows):
+                if self.ui.tableWidget.item(row, column).text() != '':
+                    tempdate.append(datetime.strptime(self.ui.tableWidget.item(row , 5).text() + ' ' + self.ui.tableWidget.item(row , 6).text(), '%Y-%m-%d %H:%M:%S'))
+                    tempframe.append(float(self.ui.tableWidget.item(row , column).text()))
+            plt.plot(tempdate, tempframe, label = self.ui.tableWidget.horizontalHeaderItem(column).text())
+  
+            plt.title("График " + self.ui.tableWidget.horizontalHeaderItem(column).text())
+            plt.xticks(rotation = 90)
+            plt.xlabel(self.ui.tableWidget.horizontalHeaderItem(5).text() + ' ' + self.ui.tableWidget.horizontalHeaderItem(6).text())
+            plt.ylabel(self.ui.tableWidget.horizontalHeaderItem(column).text()) # Ошибка, не может получить текст
+            plt.legend()
+            #plt.get_current_fig_manager().window.showMaximized() - развернуть график на весь экран по умолчанию
+            plt.show()
+        except:
+            pass
 
     # Сохранение данных из таблицы в файл
     def SaveFile(self):
@@ -523,264 +742,20 @@ class Application(QMainWindow):
 
         return typetb
 
-
-
-
-
-    # Отрисовка графиков
-    def ShowPlot(self):
-        tempdate = []
-        column = self.ui.tableWidget.currentColumn()
-        rows = self.ui.tableWidget.rowCount()
-        tempframe = []
-        try:
-            for row in range (rows):
-                if self.ui.tableWidget.item(row, column).text() != '':
-                    tempdate.append(datetime.strptime(self.ui.tableWidget.item(row , 5).text() + ' ' + self.ui.tableWidget.item(row , 6).text(), '%Y-%m-%d %H:%M:%S'))
-                    tempframe.append(float(self.ui.tableWidget.item(row , column).text()))
-            plt.plot(tempdate, tempframe, label = self.ui.tableWidget.horizontalHeaderItem(column).text())
-            # for row in range(rows):
-            #     if self.ui.tableWidget.item(row, column).text() != '':
-                    # for j in range (self.ui.tableWidget.rowCount()):
-                    # tempframe.append(float(self.ui.tableWidget.item(row , column).text()))
-                    # plt.plot(tempframe)
-  
-            plt.title("График " + self.ui.tableWidget.horizontalHeaderItem(column).text())
-            plt.xticks(rotation = 90)
-            plt.xlabel(self.ui.tableWidget.horizontalHeaderItem(5).text() + ' ' + self.ui.tableWidget.horizontalHeaderItem(6).text())
-            plt.ylabel(self.ui.tableWidget.horizontalHeaderItem(column).text()) # Ошибка, не может получить текст
-            plt.legend()
-            #plt.get_current_fig_manager().window.showMaximized() - развернуть график на весь экран по умолчанию
-            plt.show()
-        except:
-            pass
-
-    # Отображение всех данных с возможностью выборки
-    def showtable(self):
-        Query = QSqlQuery()
-
-        # Выбор по дате
-        if self.ui.date_checkBox.isChecked() == True:
-            datacheck = f"WHERE datetime(observations.date,  observations.time) >= '{self.ui.dateTimeEdit_min.dateTime().toPyDateTime()}' AND datetime(observations.date, observations.time) <= '{self.ui.dateTimeEdit_max.dateTime().toPyDateTime()}'"
-            ch = 1
-        else:
-            datacheck = ''
-            ch = 0
-
-        # Выбор по датчику
-        if self.ui.sensor_checkBox.isChecked() == True and int(self.ui.sensors_comboBox.currentData()) > -1:
-            if ch == 1:
-                w = 'AND'
-            else:
-                w = 'WHERE'
-            sensorcheck = f"{w} sensors.uid_sensor == {int(self.ui.sensors_comboBox.currentData())}"
-            ch = 1
-        else:
-            sensorcheck = ''
-            ch = 0
-
-        # Выбор по корректности
-        if self.ui.true_checkBox.isChecked() == True and int(self.ui.true_comboBox.currentData()) > -1:
-            if ch == 1:
-                w = 'AND'
-            else:
-                w = 'WHERE'
-            if int(self.ui.true_comboBox.currentData()) == 0:
-                truecheck = f"{w} observations.mark == {int(self.ui.true_comboBox.currentData()+1)}"
-            else:
-                truecheck = f"{w} observations.mark == {int(self.ui.true_comboBox.currentData()-1)}"
-            ch = 1
-        else:
-            truecheck = ''
-            ch = 0    
-
-        # Выбор по типу данных
-        if self.ui.type_checkBox.isChecked() == True and str(self.ui.type_comboBox.currentData()) != 'Все':   
-            if ch == 1:
-                w = "AND"
-            else:
-                w = "WHERE"
-            datetype = f"observations.{str(self.ui.type_comboBox.currentData())},"
-            # typecheck = f"JOIN {str(self.ui.type_comboBox.currentData())} ON {str(self.ui.type_comboBox.currentData())}.uid_observations = observations.uid_observations"
-            NH = 9
-        else:
-            datetype = """
-            observations.water_content, observations.PAR, observations.temperature_air,
-            observations.RH, observations.wind_speed, observations.gust_speed, observations.wind_direction,
-            observations.temperature_ground, observations.pressure, observations.rain, observations.solar_radiation,
-            """
-
-            # typecheck = """
-            # LEFT JOIN water_content ON water_content.uid_observations = observations.uid_observations
-            # LEFT JOIN current ON current.uid_observations = observations.uid_observations
-            # LEFT JOIN PAR ON PAR.uid_observations = observations.uid_observations
-            # LEFT JOIN temperature_air ON temperature_air.uid_observations = observations.uid_observations
-            # LEFT JOIN RH ON RH.uid_observations = observations.uid_observations
-            # LEFT JOIN wind_speed ON wind_speed.uid_observations = observations.uid_observations
-            # LEFT JOIN gust_speed ON gust_speed.uid_observations = observations.uid_observations
-            # LEFT JOIN wind_direction ON wind_direction.uid_observations = observations.uid_observations
-            # LEFT JOIN temperature_ground ON temperature_ground.uid_observations = observations.uid_observations
-            # LEFT JOIN pressure ON pressure.uid_observations = observations.uid_observations
-            # LEFT JOIN rain ON rain.uid_observations = observations.uid_observations
-            # LEFT JOIN solar_radiation ON solar_radiation.uid_observations = observations.uid_observations"""
-        
-            NH = 19
-
-
-        Query.exec(
-            f"""
-            SELECT observations.mark, observations.uid_observations,
-            sensors.name, sensors.serial_number, type_sensors.type,
-            observations.date, observations.time, 
-            {datetype}
-            observations.mark
-            FROM observations
-            LEFT JOIN sensors ON sensors.uid_sensor = observations.uid_sensor
-            LEFT JOIN type_sensors ON sensors.uid_type = type_sensors.uid_type
-            {datacheck}
-            {sensorcheck}
-            {truecheck}
-            """
-        )
-
-        # print(Query.executedQuery())
-
-
-        self.ui.tableWidget.clear()
-        self.ui.tableWidget.setRowCount(0)
-        self.ui.tableWidget.setColumnCount(NH)
-        if NH == 19:
-            self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
-                                                        'Water Content, m³/m³', 'PAR, µmol/m²/s', 'Temperature Air, °C', 'RH, %', 
-                                                        'Wind Speed, mph', 'Gust Speed, mph', 'Wind Direction,  ø', 'Temperature Ground, °C',
-                                                        'Pressure, Hg', 'Rain', 'Solar Radiation, W/m²', 'Корректность'])
-        else:
-            self.ui.tableWidget.setHorizontalHeaderLabels([' ', '№', 'Датчик', 'Серийный номер', 'Тип датчика', 'Дата', 'Время', 
-                                                        f'{str(self.ui.type_comboBox.currentText())}', 'Корректность'])
-
-        
-
-        # Изменение метки корректности
-        def changeS():
-            row = self.ui.tableWidget.currentRow()
-            id = int(self.ui.tableWidget.item(row, 1).text())
-            if CheckBox[row].isChecked() == True:
-                mark = 1
-                self.ui.tableWidget.setItem(row, (NH-1), QTableWidgetItem(str("Верно")))
-                if row%2 ==1:
-                    self.ui.tableWidget.item(row, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
-            else:
-                mark = 0
-                self.ui.tableWidget.setItem(row, (NH-1), QTableWidgetItem(str("Ошибка")))
-                if row%2 ==1:
-                    self.ui.tableWidget.item(row, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
-
-            Query.exec(
-                f"""
-                UPDATE observations
-                SET mark = {mark}
-                WHERE uid_observations = {id}
-                """
-            )
-
-        CheckBox = []
-
-        try:
-            while Query.next():
-                rows = self.ui.tableWidget.rowCount()
-                self.ui.tableWidget.setRowCount(rows + 1)
-                i = 0
-                for i in range(NH):
-                    self.ui.tableWidget.setItem(rows, i, QTableWidgetItem(str(Query.value(i))))
-                    if rows%2 ==1:
-                        self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
-
-            for rows in range(self.ui.tableWidget.rowCount()):
-                CheckBox.append(QtWidgets.QCheckBox())
-                if int(self.ui.tableWidget.item(rows, 0).text()) == 1:
-                    self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Верно")))
-                    if rows%2 ==1:
-                        self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
-                    CheckBox[-1].setChecked(True)
-                    self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
-                    CheckBox[-1].stateChanged.connect(changeS)
-                else:
-                    self.ui.tableWidget.setItem(rows, (NH-1), QTableWidgetItem(str("Ошибка")))
-                    if rows%2 ==1:
-                        self.ui.tableWidget.item(rows, (NH-1)).setBackground(QtGui.QColor(202, 204, 206))
-                    self.ui.tableWidget.setCellWidget(rows, 0, CheckBox[-1])
-                    CheckBox[-1].stateChanged.connect(changeS)
-                
-                
-            self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-            self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
-
-        except:
-            QMessageBox.about(self, "Данные", "Произошла ошибка отображения")
-            return
-    
-        
-    def MAX(self):
-        max_list = []
-        column = self.ui.tableWidget.currentColumn()
-        rows = self.ui.tableWidget.rowCount()
-        try:
-            for row in range(rows):
-                if self.ui.tableWidget.item(row, column).text() != '':
-                    max_list.append(float(self.ui.tableWidget.item(row, column).text()))
-            mbox = QMessageBox()
-            mbox.setText("Максимум по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(max(max_list)))
-            mbox.setWindowTitle("Максимум")
-            mbox.exec_()
-        except:
-            pass
-
-    def MIN(self):
-        min_list = []
-        column = self.ui.tableWidget.currentColumn()
-        rows = self.ui.tableWidget.rowCount()
-        try:
-            for row in range(rows):
-                if self.ui.tableWidget.item(row, column).text() != '':
-                    min_list.append(float(self.ui.tableWidget.item(row, column).text()))
-            mbox = QMessageBox()
-            mbox.setText("Минимум по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(min(min_list)))
-            mbox.setWindowTitle("Минимум")
-            mbox.exec_()
-        except:
-            pass
-
-    def MEAN(self):
-        mean_list = []
-        column = self.ui.tableWidget.currentColumn()
-        rows = self.ui.tableWidget.rowCount()
-        try:
-            for row in range(rows):
-                if self.ui.tableWidget.item(row, column).text() != '':
-                    mean_list.append(float(self.ui.tableWidget.item(row, column).text()))
-            mbox = QMessageBox()
-            mbox.setText("Среднее по "+ str(self.ui.tableWidget.horizontalHeaderItem(column).text())+ ": " + str(round(mean(mean_list), 2)))
-            mbox.setWindowTitle("Среднее")
-            mbox.exec_()
-        except:
-            pass
-
-            
-
-    
-
-
+    # Группировка по дням
     def DayGroup(self):
         self.DateGroup('D')
     
+    # Группировка по неделям
     def WeekGroup(self):
         self.DateGroup('W')
 
+    # Группировка по сесяцам
     def MonthGroup(self):
         self.DateGroup('M')
 
 
-    # Срочные данные (День, неденя, месяц)
+    # Срочные данные (День, неденя, месяц), в зависимости от выбранной группировки
     def DateGroup(self, typegroup):
         try:
             df = {"Дата": [], "Temperature Air, °C": []}
@@ -935,8 +910,6 @@ class Application(QMainWindow):
                 if rows%2 ==1:
                     self.ui.tableWidget.item(rows, i).setBackground(QtGui.QColor(202, 204, 206))
         
-        # self.ui.tableWidget.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        # self.ui.tableWidget.horizontalHeader().setMinimumSectionSize(0)
 
     # Нахождение координат датчиков
     def coords_sens(self):
